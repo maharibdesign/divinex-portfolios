@@ -1,0 +1,24 @@
+---
+import NavBar from '../components/NavBar.astro';
+import '../styles/global.css';
+
+interface Props { title: string; }
+const { title } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content="Storeka Mini-App" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+		<title>{title}</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+	</head>
+	<body>
+    <NavBar />
+		<main class="container"> <slot /> </main>
+    <script is:inline>
+      try{const tg=window.Telegram.WebApp;tg.ready();const applyTheme=()=>{document.documentElement.className=tg.colorScheme};tg.onEvent("themeChanged",applyTheme);applyTheme();tg.BackButton.show();tg.BackButton.onClick(()=>{window.history.back()})}catch(e){console.warn("Telegram script failed."),document.documentElement.className="light"}
+    </script>
+	</body>
+</html>

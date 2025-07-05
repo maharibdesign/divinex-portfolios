@@ -1,0 +1,106 @@
+---
+// We read the official Admin ID from our secure .env file
+const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
+---
+<header>
+  <nav>
+    <a href="/" class="brand">Storeka</a>
+    <div class="nav-actions">
+      <!-- This is our hidden Admin button -->
+      <!-- It is hidden by default and only shown via script if the user is the admin -->
+      <a href="/admin" id="admin-link" class="admin-button" style="display: none;">Admin</a>
+
+      <!-- This is our theme toggle button -->
+      <button id="theme-toggle" title="Toggle theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<script define:vars={{ ADMIN_ID }}>
+  // This script block handles both theme toggling and admin button visibility
+  
+  // --- Admin Button Logic ---
+  const adminLink = document.getElementById('admin-link');
+  try {
+    // Get the current user's ID from the Telegram object
+    const currentUserId = window.Telegram.WebApp.initDataUnsafe.user?.id.toString();
+    
+    // Compare the current user's ID to the official Admin ID passed from the server
+    if (adminLink && currentUserId === ADMIN_ID) {
+      // If they match, show the button
+      adminLink.style.display = 'inline-block';
+    }
+  } catch (e) {
+    // If not running in Telegram, this will fail silently, which is fine.
+    console.log('Not running in Telegram or user data not available.');
+  }
+
+
+  // --- Theme Toggle Logic ---
+  const themeToggle = document.getElementById('theme-toggle');
+  
+  const applyTheme = (theme) => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  };
+
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    applyTheme(savedTheme);
+  }
+
+  themeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    const newTheme = isDark ? 'light' : 'dark';
+    applyTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  });
+</script>
+
+<style>
+  header {
+    position: sticky; top: 0; width: 100%;
+    background-color: var(--header-bg-color);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    z-index: 100; border-bottom: 1px solid var(--border-color);
+  }
+  nav {
+    max-width: 1400px; margin: 0 auto; padding: 0 1rem;
+    height: 60px; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    font-size: 1.75rem; font-weight: 800;
+    color: var(--text-color); letter-spacing: -1px;
+  }
+  
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* Space between Admin and Theme buttons */
+  }
+
+  .admin-button {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--link-color) 90%, black);
+    color: var(--button-text-color);
+    transition: background-color 0.2s;
+  }
+  .admin-button:hover {
+    background-color: var(--link-color);
+  }
+
+  #theme-toggle {
+    background: none; border: none; cursor: pointer; padding: 0.5rem;
+    border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; color: var(--text-color);
+  }
+  #theme-toggle:hover { background-color: var(--border-color); }
+  .icon-moon, .dark .icon-sun { display: none; }
+  .icon-sun, .dark .icon-moon { display: block; }
+</style>
