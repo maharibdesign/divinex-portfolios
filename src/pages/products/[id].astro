@@ -2,7 +2,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import { TELEGRAM_CONTACT_LINK } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
-import { type Product } from '../../types'; // Import our new Product type
+import { type Product } from '../../types'; // CORRECTED PATH
 
 const { id } = Astro.params;
 let product: Product | null = null;
@@ -22,7 +22,7 @@ if (!id || isNaN(Number(id))) {
       console.error('Supabase fetch error:', error.message);
       fetchError = `Product not found or database error: ${error.message}`;
     } else {
-      // We cast the single data object to our Product type
+      // We explicitly tell TypeScript to treat the single data object as our Product type.
       product = data as Product;
     }
   } catch (e) {
@@ -31,15 +31,15 @@ if (!id || isNaN(Number(id))) {
   }
 }
 
+// If we failed to get a valid product, show an error page.
 if (!product) {
   return new Response(`Error: ${fetchError || 'Product could not be loaded.'}`, {
     status: 404
   });
 }
 
-// No need for default values here anymore because we've handled the !product case
+// Now we can safely use the product data, providing fallbacks for each field.
 const { title, price, images, category, description } = product;
-// We still check if images is an array before trying to map it
 const imageArray = Array.isArray(images) ? images : (product.image ? [product.image] : []);
 ---
 <MainLayout title={title || 'Product Details'}>

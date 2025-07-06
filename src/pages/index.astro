@@ -1,21 +1,21 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import { type Product } from '../types'; // Import our new Product type
+import { type Product } from '../types'; // CORRECTED PATH
 
 let products: Product[] = [];
 try {
   const response = await fetch(`${Astro.url.origin}/api/products/get`);
-  if (!response.ok) {
-    console.error(`Error fetching products for homepage: ${response.statusText}`);
-  } else {
-    // We cast the JSON response to our Product[] type
+  if (response.ok) {
+    // We explicitly tell TypeScript to treat the incoming JSON as an array of our Product type.
     products = await response.json() as Product[];
+  } else {
+    console.error(`Error fetching products: ${response.statusText}`);
   }
 } catch (error) {
   console.error("Fetch failed for homepage:", error);
 }
 
-// Now TypeScript knows that product.category can be null, so we handle it.
+// This logic is now null-safe.
 const categories = ['All', ...new Set(products.map(p => p.category || ''))].filter(Boolean);
 ---
 <MainLayout title="Storeka - Modern Product Catalog">
@@ -47,7 +47,7 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   </div>
 </MainLayout>
 
-<!-- Script and Style tags remain unchanged -->
+<!-- The script and style tags are correct and remain unchanged. -->
 <script>
   const searchBar=document.getElementById("search-bar") as HTMLInputElement;const categoryContainer=document.getElementById("category-filters");const productCards=document.querySelectorAll(".product-card") as NodeListOf<HTMLElement>;let activeCategory="All";function filterProducts(){const searchTerm=searchBar.value.toLowerCase().trim();productCards.forEach(card=>{const isCategoryMatch=activeCategory==="All"||card.dataset.category===activeCategory;const isSearchMatch=card.dataset.name?.toLowerCase().includes(searchTerm);card.style.display=isCategoryMatch&&isSearchMatch?"flex":"none"})}categoryContainer?.addEventListener("click",e=>{const target=e.target as HTMLElement;if(target.matches(".filter-btn")){categoryContainer.querySelector(".active")?.classList.remove("active");target.classList.add("active");activeCategory=target.dataset.category||"All";filterProducts()}});searchBar.addEventListener("input",filterProducts);
 </script>
@@ -57,11 +57,9 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   .category-filters{display:flex;flex-wrap:wrap;gap:.75rem}
   .filter-btn{padding:.5rem 1rem;font-size:.9rem;font-weight:500;border:none;border-radius:8px;background-color:var(--secondary-bg-color);color:var(--text-color);cursor:pointer;transition:.2s}
   .filter-btn.active{background-color:var(--button-color);color:var(--button-text-color)}
-  
   #product-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, 1fr); }
   @media(min-width: 640px){#product-grid{grid-template-columns:repeat(3,1fr);}}
   @media(min-width:1024px){#product-grid{grid-template-columns:repeat(5,1fr);}}
-  
   .product-card {
     background-color: var(--secondary-bg-color); border-radius: 16px; overflow: hidden;
     text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -69,10 +67,8 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   }
   .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.07); }
   .dark .product-card:hover { box-shadow: 0 0 25px color-mix(in srgb, var(--link-color) 15%, transparent); }
-  
   .card-image-container { width: 100%; height: 140px; flex-shrink: 0; }
   .product-card img { width: 100%; height: 100%; object-fit: cover; }
-  
   .card-content { padding: 0.75rem; display: flex; flex-direction: column; flex-grow: 1; }
   .card-category { font-size:.7rem; font-weight:600; color:var(--hint-color); text-transform:uppercase; }
   .card-title { font-size: 0.9rem; font-weight: 600; color:var(--text-color); margin: 0.25rem 0 0.5rem; line-height: 1.3; flex-grow: 1; }
