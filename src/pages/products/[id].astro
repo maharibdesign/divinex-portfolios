@@ -17,22 +17,11 @@ if (!id || isNaN(Number(id))) {
       .select('*')
       .eq('id', id)
       .single();
-
-    if (error) {
-      fetchError = `Product not found or database error: ${error.message}`;
-    } else {
-      product = data as Product;
-    }
-  } catch (e) {
-    fetchError = 'A server error occurred while fetching the product.';
-  }
+    if (error) { fetchError = `Product not found: ${error.message}`; } 
+    else { product = data as Product; }
+  } catch (e) { fetchError = 'A server error occurred.'; }
 }
-
-if (!product) {
-  return new Response(`Error: ${fetchError || 'Product could not be loaded.'}`, {
-    status: 404
-  });
-}
+if (!product) { return new Response(`Error: ${fetchError || 'Product could not be loaded.'}`, { status: 404 }); }
 
 const { title, price, images, category, description } = product;
 const imageArray = Array.isArray(images) ? images : (product.image ? [product.image] : []);
@@ -66,17 +55,12 @@ const imageArray = Array.isArray(images) ? images : (product.image ? [product.im
   .product-detail{display:grid;grid-template-columns:1fr;gap:2rem;}
   @media(min-width:768px){.product-detail{grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:3rem;}}
   
-  /* --- THE KEY FIX FOR THE DETAIL PAGE --- */
-  .product-images {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
+  .product-images { display: flex; flex-direction: column; gap: 1rem; }
   .image-wrapper {
     width: 100%;
-    /* You can use a different aspect ratio for detail pages if you like, e.g., 16/9 for a more cinematic look */
     aspect-ratio: 1.618 / 1;
-    border-radius: 16px;
+    /* !!! UPDATED: More rounded corners !!! */
+    border-radius: 20px;
     background-color: var(--secondary-bg-color);
     padding: 1rem;
     overflow: hidden;
@@ -84,11 +68,10 @@ const imageArray = Array.isArray(images) ? images : (product.image ? [product.im
   .product-images img {
     width: 100%;
     height: 100%;
-    /* 'contain' ensures the full image is visible, no cropping */
     object-fit: contain;
   }
   .placeholder-image { 
-    width:100%; aspect-ratio:1.618 / 1; border-radius:16px;
+    width:100%; aspect-ratio:1.618 / 1; border-radius:20px;
     background-color:var(--secondary-bg-color); display: grid; place-content: center;
     color: var(--hint-color); 
   }

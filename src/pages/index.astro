@@ -35,6 +35,8 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
         <div class="card-content">
           <span class="card-category">{product.category || 'Uncategorized'}</span>
           <h3 class="card-title">{product.title || 'Untitled Product'}</h3>
+          <!-- !!! NEW: The description is added here !!! -->
+          <p class="card-description">{product.description || 'No description available.'}</p>
           <div class="card-footer">
             <p class="card-price">${(product.price || 0).toFixed(2)}</p>
             <span class="card-button">View</span>
@@ -62,7 +64,6 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(2, 1fr);
-    /* This forces all cards in a row to stretch to the height of the tallest card */
     grid-auto-rows: 1fr;
   }
   @media(min-width: 640px){#product-grid{grid-template-columns:repeat(3,1fr);}}
@@ -70,13 +71,12 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   
   .product-card {
     background-color: var(--secondary-bg-color);
-    /* !!! RE-ADDED: The rounded corners for the card !!! */
-    border-radius: 16px;
+    /* !!! UPDATED: More rounded corners !!! */
+    border-radius: 20px;
     overflow: hidden;
     text-decoration: none;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 1px solid var(--border-color);
-    /* The card is a flex container, arranging its children vertically */
     display: flex;
     flex-direction: column;
   }
@@ -87,24 +87,24 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
     width: 100%;
     aspect-ratio: 1.618 / 1;
     flex-shrink: 0;
-    background-color: var(--secondary-bg-color); /* Match card bg for a seamless look */
-    /* !!! ADDED: Padding to create a "frame" effect !!! */
+    background-color: var(--secondary-bg-color);
     padding: 0.75rem;
   }
   .product-card img {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    /* !!! ADDED: Rounded corners for the image itself !!! */
-    border-radius: 8px; /* A slightly smaller radius than the card */
+    /* !!! UPDATED: More rounded corners to match the card !!! */
+    border-radius: 12px;
   }
   
   .card-content {
-    padding: 0.75rem;
+    padding: 0 1rem 1rem 1rem; /* Adjust padding slightly */
     display: flex;
     flex-direction: column;
-    /* This makes the content area fill all available vertical space */
     flex-grow: 1;
+    /* This is needed for the truncation to work */
+    overflow: hidden;
   }
   
   .card-category { font-size:.7rem; font-weight:600; color:var(--hint-color); text-transform:uppercase; }
@@ -115,16 +115,29 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
     color:var(--text-color);
     margin: 0.25rem 0 0.5rem;
     line-height: 1.3;
-    /* The title area expands to push the footer down */
-    flex-grow: 1;
+  }
+
+  /* !!! NEW: Styles for the dynamic description !!! */
+  .card-description {
+    font-size: 0.85rem;
+    color: var(--hint-color);
+    line-height: 1.4;
+    margin: 0;
+    flex-grow: 1; /* This makes the description take up the available space */
+    
+    /* The magic for multi-line truncation */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3; /* You can adjust this number (e.g., 2, 3, 4) */
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .card-footer {
     display:flex;
     justify-content:space-between;
     align-items:center;
-    /* This is no longer the primary alignment method, but reinforces the push */
-    margin-top: auto;
+    margin-top: 0.75rem; /* Give it some space from the description */
     flex-wrap: wrap;
     gap: 0.5rem;
   }
