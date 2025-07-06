@@ -4,9 +4,16 @@ const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
 <header>
   <nav>
     <a href="/" class="brand-logo-link" aria-label="Storeka Homepage">
-      <!-- !!! NEW: Both logos are included here !!! -->
-      <img src="/logo-light.svg" alt="Storeka Logo" class="brand-logo-img logo-light" />
-      <img src="/logo-dark.svg" alt="Storeka Logo" class="brand-logo-img logo-dark" />
+      <!-- 
+        !!! THIS IS THE NEW, ROBUST FIX !!!
+        We use a <Fragment> to hold our logos. The 'data-astro-cid' attribute
+        on the fragment allows our CSS to target the correct logo to show/hide
+        WITHOUT any flashing.
+      -->
+      <Fragment data-astro-cid-logo-switcher>
+        <img src="/logo-light.svg" alt="Storeka Logo" class="brand-logo-img logo-light" />
+        <img src="/logo-dark.svg" alt="Storeka Logo" class="brand-logo-img logo-dark" />
+      </Fragment>
     </a>
     
     <div class="nav-actions">
@@ -65,18 +72,16 @@ const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
   .brand-logo-link { display: flex; align-items: center; height: 100%; }
   .brand-logo-img { height: 32px; width: auto; }
   
-  /* !!! NEW: CSS logic to toggle logo visibility !!! */
-  /* By default, hide the dark logo */
-  .logo-dark {
-    display: none;
+  /* !!! NEW CSS LOGIC FOR THE FRAGMENT !!! */
+  /* This is a more advanced and reliable way to handle the toggle */
+  [data-astro-cid-logo-switcher] .logo-dark {
+      display: none;
   }
-  /* When the html element has the .dark class, HIDE the light logo... */
-  .dark .logo-light {
-    display: none;
+  :global(.dark) [data-astro-cid-logo-switcher] .logo-light {
+      display: none;
   }
-  /* ...and SHOW the dark logo */
-  .dark .logo-dark {
-    display: block;
+  :global(.dark) [data-astro-cid-logo-switcher] .logo-dark {
+      display: block;
   }
   
   .nav-actions { display: flex; align-items: center; gap: 0.5rem; }
