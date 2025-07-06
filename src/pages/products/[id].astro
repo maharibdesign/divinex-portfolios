@@ -6,25 +6,21 @@ import type { Database } from '../../lib/database.types';
 
 type Product = Database['public']['Tables']['products']['Row'];
 
-// Get the product ID from the URL, e.g., /products/1
 const { id } = Astro.params;
 let product: Product | null = null;
 let fetchError: string | null = null;
 
 if (!id || isNaN(Number(id))) {
-  // If the ID is missing or not a number, it's an invalid request.
   fetchError = "Invalid Product ID provided.";
 } else {
-  // Fetch this specific product from the database
   try {
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('id', id)
-      .single(); // We expect only one result
+      .single();
 
     if (error) {
-      // This happens if no product with that ID is found, or a DB error occurs.
       console.error('Supabase fetch error:', error.message);
       fetchError = `Product not found or database error: ${error.message}`;
     } else {
@@ -36,47 +32,44 @@ if (!id || isNaN(Number(id))) {
   }
 }
 
-// If after all that, we still don't have a product, we cannot render the page.
-// We will show an error message instead of redirecting. This is better for debugging.
 if (!product) {
   return new Response(`Error: ${fetchError || 'Product could not be loaded.'}`, {
     status: 404
   });
 }
 
-// If we get here, the 'product' variable is valid.
-const { title, price, images, category, description } = product;
+// !!! FIXED: Added fallbacks for potentially null values !!!
+const { title = 'Untitled Product', price = 0, images, category = 'Uncategorized', description = 'No description available.' } = product;
+const imageArray = Array.isArray(images) ? images : (product.image ? [product.image] : []);
 ---
 <MainLayout title={title}>
-  <!-- Explicit "Back to Home" button as requested -->
   <a href="/" class="back-link">← Back to Catalog</a>
 
   <div class="product-detail">
     <div class="product-images">
-      <!-- The images are now a JSONB array, so we map over them -->
-      <!-- Added a check to ensure images is an array before mapping -->
-      {Array.isArray(images) ? images.map(img => <img src={img} alt={title} loading="lazy" />) : <img src={product.image} alt={title} />}
+      {imageArray.length > 0 ? (
+        imageArray.map(img => <img src={img} alt={title} loading="lazy" />)
+      ) : (
+        <div class="placeholder-image">No Image</div>
+      )}
     </div>
     <div class="product-info">
       <p class="category">{category}</p>
       <h1>{title}</h1>
-      <div class="price">${price ? price.toFixed(2) : 'N/A'}</div>
-      <!-- We now use the description field directly from the database -->
+      <div class="price">${price.toFixed(2)}</div>
       <div class="description"><p>{description}</p></div>
       <a href={TELEGRAM_CONTACT_LINK} class="cta-button" target="_blank">Order on Telegram</a>
     </div>
   </div>
 </MainLayout>
 <style>
-  .back-link {
-    display: inline-block;
-    margin-bottom: 2rem;
-    font-weight: 500;
-    color: var(--link-color);
-  }
+  .back-link { display: inline-block; margin-bottom: 2rem; font-weight: 500; color: var(--link-color); }
   .product-detail{display:grid;grid-template-columns:1fr;gap:2rem;}
   @media(min-width:768px){.product-detail{grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:3rem;}}
-  .product-images img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:16px;background-color:var(--secondary-bg-color);}
+  .product-images img, .placeholder-image {
+    width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:16px; background-color:var(--secondary-bg-color);
+  }
+  .placeholder-image { display: grid; place-content: center; color: var(--hint-color); }
   .product-info{padding:1rem;}
   .category{font-weight:600;color:var(--hint-color);margin-bottom:.5rem;}
   h1{font-size:2.5rem;margin:0 0 .5rem;line-height:1.2;}
