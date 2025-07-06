@@ -35,7 +35,11 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
           </label>
           <label>Price <input type="number" name="price" step="0.01" value={product.price || 0} required /></label>
         </div>
-        <p>To change images, please delete and re-create the product for now.</p>
+        <!-- Re-added image fields for editing URL, upload can be added later -->
+        <label>Main Image URL <input type="text" name="image" value={product.image || ''} required /></label>
+        <label>Gallery Image URLs (as a JSON array)
+          <input type="text" name="images" value={JSON.stringify(product.images || [])} required />
+        </label>
         <div class="form-actions">
           <a href="/admin" class="btn btn-secondary">Cancel</a>
           <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -45,5 +49,30 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
   </div>
 </MainLayout>
 <script>
-  // Edit form submission logic remains the same
+  const editForm = document.getElementById('edit-product-form');
+  editForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(editForm);
+    const productData = {
+      id: formData.get('id'),
+      title: formData.get('title'),
+      description: formData.get('description'),
+      category: formData.get('category'),
+      price: parseFloat(formData.get('price') as string),
+      image: formData.get('image'),
+      images: JSON.parse(formData.get('images') as string)
+    };
+    const response = await fetch('/api/products/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productData),
+    });
+    if (response.ok) {
+      alert('Product updated successfully!');
+      window.location.href = '/admin';
+    } else {
+      const result = await response.json();
+      alert(`Error updating product: ${result.error}`);
+    }
+  });
 </script>
