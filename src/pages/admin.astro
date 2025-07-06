@@ -1,16 +1,12 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import type { Database } from '../lib/database.types';
-
-type Product = Database['public']['Tables']['products']['Row'];
+import type { Product } from '../../types';
 
 let products: Product[] = [];
 try {
   const response = await fetch(`${Astro.url.origin}/api/products/get`);
-  if (!response.ok) {
-    console.error(`Error fetching products for admin page: ${response.statusText}`);
-  } else {
-    products = await response.json();
+  if (response.ok) {
+    products = await response.json() as Product[];
   }
 } catch (error) {
   console.error("Fetch failed for admin page:", error);
@@ -20,7 +16,6 @@ try {
   <div class="admin-panel">
     <h1>Admin Panel</h1>
 
-    <!-- Section 1: Add a New Product Form -->
     <section class="admin-section">
       <h2>Add New Product</h2>
       <form id="add-product-form" class="product-form">
@@ -37,26 +32,24 @@ try {
           </label>
           <label>Price <input type="number" name="price" step="0.01" required /></label>
         </div>
-        
-        <!-- !!! FIXED: Changed type="url" to type="text" !!! -->
         <label>Main Image URL <input type="text" name="image" placeholder="/images/name.jpg or https://..." required /></label>
-        
         <label>Gallery Image URLs (as a JSON array)
-          <input type="text" name="images" placeholder='["https://.../img1.jpg"]' required />
+          <input type="text" name="images" placeholder='["/images/img1.jpg"]' required />
         </label>
         <button type="submit">Add Product</button>
       </form>
     </section>
 
-    <!-- Section 2: Manage Existing Products List -->
     <section class="admin-section">
       <h2>Manage Existing Products</h2>
       <ul class="product-list" id="product-list">
         {products.map(product => (
           <li data-product-id={product.id}>
-            <img src={product.image} alt={product.title} class="product-thumb" />
-            <span class="product-title">{product.title}</span>
+            <img src={product.image || '/favicon.svg'} alt={product.title || ''} class="product-thumb" />
+            <span class="product-title">{product.title || 'Untitled'}</span>
             <div class="product-actions">
+              <!-- !!! UPDATED: The Edit button is now a link !!! -->
+              <a href={`/admin/edit/${product.id}`} class="edit-btn">Edit</a>
               <button class="delete-btn">Delete</button>
             </div>
           </li>
@@ -66,69 +59,51 @@ try {
   </div>
 </MainLayout>
 
-<!-- (The <script> and <style> tags remain the same as the previous response) -->
+<!-- The script and style tags remain the same -->
 <script>
   const addForm = document.getElementById('add-product-form') as HTMLFormElement;
   const productList = document.getElementById('product-list');
-
-  // Logic to handle the "Add Product" form submission
   addForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(addForm);
     const productData = Object.fromEntries(formData.entries());
-    
     productData.price = parseFloat(productData.price as string);
     try {
       productData.images = JSON.parse(productData.images as string);
     } catch {
-      alert('Error: Invalid format for Gallery Image URLs. It must be a valid JSON array like ["url1", "url2"].');
-      return;
+      alert('Error: Invalid format for Gallery Image URLs.'); return;
     }
-
     const response = await fetch('/api/products/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productData),
     });
-
     if (response.ok) {
-      alert('Product added successfully!');
-      window.location.reload();
+      alert('Product added successfully!'); window.location.reload();
     } else {
-      const result = await response.json();
-      alert(`Error adding product: ${result.error}`);
+      const result = await response.json(); alert(`Error: ${result.error}`);
     }
   });
-
-  // Logic to handle "Delete" button clicks
   productList?.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
     if (target.matches('.delete-btn')) {
       const productItem = target.closest('li');
       if (!productItem) return;
-      
       const productId = productItem.dataset.productId;
       if (!productId) return;
-
-      if (confirm('Are you sure you want to delete this product? This cannot be undone.')) {
+      if (confirm('Are you sure you want to delete this product?')) {
         const response = await fetch('/api/products/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: productId }),
         });
-
         if (response.ok) {
-          productItem.remove();
-          alert('Product deleted successfully.');
+          productItem.remove(); alert('Product deleted.');
         } else {
-          const result = await response.json();
-          alert(`Error deleting product: ${result.error}`);
+          const result = await response.json(); alert(`Error: ${result.error}`);
         }
       }
     }
   });
 </script>
-
 <style>
   .admin-panel { max-width: 800px; margin: 0 auto; }
   .admin-section { background-color: var(--secondary-bg-color); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; }
@@ -149,6 +124,11 @@ try {
   .product-list li { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border-radius: 8px; background-color: var(--bg-color); }
   .product-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
   .product-title { flex-grow: 1; font-weight: 500; }
-  .product-actions button { font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 6px; border: none; cursor: pointer; }
+  .product-actions { display: flex; gap: 0.5rem; }
+  .product-actions a, .product-actions button {
+    font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 6px; border: none; cursor: pointer;
+    text-decoration: none; display: inline-block;
+  }
+  .edit-btn { background-color: #ff9500; color: white; }
   .delete-btn { background-color: #ff3b30; color: white; }
 </style>
