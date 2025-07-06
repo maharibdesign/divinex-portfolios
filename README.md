@@ -1,47 +1,91 @@
-# Astro Starter Kit: Minimal
+# Storeka Mini-App
 
-```sh
-npm create astro@latest -- --template minimal
+Storeka is a high-performance product catalog built with Astro, designed to function as a standalone website and a seamless Telegram Mini App. It features a dynamic backend powered by Supabase for product management and is deployed on Vercel.
+
+Live Application: [https://storeka-app.vercel.app](https://storeka-app.vercel.app)
+
+---
+
+## Core Features
+
+- Dynamic Product Catalog: Products are fetched in real-time from a Postgres database managed by Supabase.
+- Interactive Filtering: Includes client-side search and category filtering for instant results.
+- Full Admin Panel: A secure  route allows for complete CRUD (Create, Read, Update, Delete) management of products.
+- Direct Image Uploads: The admin panel supports direct file uploads to Supabase Storage, removing the need for manual URL entry.
+- Telegram Mini App Ready: Integrates with Telegram's Web App API for native theme adaptation and back-button functionality.
+
+## Tech Stack
+
+- Framework: Astro (SSR Mode)
+- Database: Supabase (Postgres)
+- File Storage: Supabase Storage
+- Deployment: Vercel
+- Languages: TypeScript, HTML, CSS
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- A Supabase account (free tier)
+
+### 1. Clone Repository
+
+```bash
+git clone https://github.com/YourUsername/storeka-app.git
+cd storeka-app
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+### 2. Install Dependencies
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```bash
+npm install
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+### 3. Configure Environment Variables
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+Create a file named  in the project root by copying the example:
 
-Any static assets, like images, can be placed in the `public/` directory.
+```bash
+cp .env.example .env
+```
 
-## 🧞 Commands
+Then, fill in the required values in your new  file:
 
-All commands are run from the root of the project, from a terminal:
+```
+# Get from your Supabase Project -> Settings -> API
+SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
+SUPABASE_SERVICE_KEY="YOUR_SUPABASE_SERVICE_ROLE_SECRET_KEY"
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+# Your numeric Telegram ID (get from @userinfobot on Telegram)
+ADMIN_TELEGRAM_ID="YOUR_TELEGRAM_ID"
 
-## 👀 Want to learn more?
+# The contact link for the "Order" button
+PUBLIC_TELEGRAM_CONTACT_LINK="https://t.me/YourTelegramUsername"
+```
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+### 4. Set Up Supabase Database & Storage
+
+- Database: In your Supabase project's Table Editor, create a  table with a schema that matches the application's needs (id, title, description, category, price, image, images).
+- Storage: In your Supabase project's Storage section, create a new public bucket named .
+
+### 5. Run the Dev Server
+
+```bash
+npm run dev
+```
+
+The app will be available at .
+
+---
+
+## Deployment
+
+This project is optimized for deployment on Vercel.
+
+1.  Push your code to a GitHub repository.
+2.  Import the repository into Vercel.
+3.  In the Vercel project settings, configure the same environment variables as listed in the  section above.
+4.  Deploy. Vercel automatically handles the build process. Subsequent pushes to the  branch will trigger automatic redeployments.
