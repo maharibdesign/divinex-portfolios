@@ -21,7 +21,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(JSON.stringify(data), { status: 200 });
   } catch (err) {
-    // CORRECTED: Type-safe error handling
     const error = err as Error;
     console.error('Update API Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
