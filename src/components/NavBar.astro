@@ -1,5 +1,5 @@
 ---
-// We read the official Admin ID from our secure .env file
+// We read the official Admin ID from our secure .env file on the server
 const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
 ---
 <header>
@@ -19,43 +19,43 @@ const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
   </nav>
 </header>
 
+<!-- This script securely passes the ADMIN_ID to the client for comparison -->
 <script define:vars={{ ADMIN_ID }}>
-  // This script block handles both theme toggling and admin button visibility
-  
-  // --- Admin Button Logic ---
-  const adminLink = document.getElementById('admin-link');
-  try {
-    // Get the current user's ID from the Telegram object
-    const currentUserId = window.Telegram.WebApp.initDataUnsafe.user?.id.toString();
-    
-    // Compare the current user's ID to the official Admin ID passed from the server
-    if (adminLink && currentUserId === ADMIN_ID) {
-      // If they match, show the button
-      adminLink.style.display = 'inline-block';
+  document.addEventListener('DOMContentLoaded', () => {
+    // --- Admin Button Logic ---
+    const adminLink = document.getElementById('admin-link');
+    try {
+      const tg = window.Telegram.WebApp;
+      // Get the current user's ID from the Telegram object
+      const currentUserId = tg.initDataUnsafe.user?.id.toString();
+      
+      // Compare the current user's ID to the official Admin ID passed from the server
+      if (adminLink && currentUserId && ADMIN_ID && currentUserId === ADMIN_ID) {
+        // If they match, show the button
+        adminLink.style.display = 'inline-block';
+      }
+    } catch (e) {
+      console.log('Could not verify admin status. (This is normal outside of Telegram)');
     }
-  } catch (e) {
-    // If not running in Telegram, this will fail silently, which is fine.
-    console.log('Not running in Telegram or user data not available.');
-  }
 
+    // --- Theme Toggle Logic ---
+    const themeToggle = document.getElementById('theme-toggle');
+    
+    const applyTheme = (theme) => {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    };
 
-  // --- Theme Toggle Logic ---
-  const themeToggle = document.getElementById('theme-toggle');
-  
-  const applyTheme = (theme) => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  };
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      applyTheme(savedTheme);
+    }
 
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme) {
-    applyTheme(savedTheme);
-  }
-
-  themeToggle.addEventListener('click', () => {
-    const isDark = document.documentElement.classList.contains('dark');
-    const newTheme = isDark ? 'light' : 'dark';
-    applyTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      const newTheme = isDark ? 'light' : 'dark';
+      applyTheme(newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
   });
 </script>
 
@@ -76,24 +76,14 @@ const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
     color: var(--text-color); letter-spacing: -1px;
   }
   
-  .nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem; /* Space between Admin and Theme buttons */
-  }
+  .nav-actions { display: flex; align-items: center; gap: 0.5rem; }
 
   .admin-button {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    background-color: color-mix(in srgb, var(--link-color) 90%, black);
-    color: var(--button-text-color);
-    transition: background-color 0.2s;
+    font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1rem;
+    border-radius: 8px; background-color: color-mix(in srgb, var(--link-color) 90%, black);
+    color: var(--button-text-color); transition: background-color 0.2s;
   }
-  .admin-button:hover {
-    background-color: var(--link-color);
-  }
+  .admin-button:hover { background-color: var(--link-color); }
 
   #theme-toggle {
     background: none; border: none; cursor: pointer; padding: 0.5rem;
