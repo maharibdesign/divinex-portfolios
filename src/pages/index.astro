@@ -1,8 +1,6 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import type { Database } from '../lib/database.types';
-
-type Product = Database['public']['Tables']['products']['Row'];
+import { type Product } from '../types'; // Import our new Product type
 
 let products: Product[] = [];
 try {
@@ -10,13 +8,15 @@ try {
   if (!response.ok) {
     console.error(`Error fetching products for homepage: ${response.statusText}`);
   } else {
-    products = await response.json();
+    // We cast the JSON response to our Product[] type
+    products = await response.json() as Product[];
   }
 } catch (error) {
   console.error("Fetch failed for homepage:", error);
 }
 
-const categories = ['All', ...new Set(products.map(p => p.category))];
+// Now TypeScript knows that product.category can be null, so we handle it.
+const categories = ['All', ...new Set(products.map(p => p.category || ''))].filter(Boolean);
 ---
 <MainLayout title="Storeka - Modern Product Catalog">
   <div class="filters">
@@ -27,14 +27,13 @@ const categories = ['All', ...new Set(products.map(p => p.category))];
   </div>
   <div id="product-grid">
     {products.map(product => (
-      // !!! FIXED: Added fallbacks for potentially null values !!!
       <a 
         href={`/products/${product.id}/`} 
         class="product-card" 
         data-name={(product.title || '').toLowerCase()} 
         data-category={product.category || 'Uncategorized'}
       >
-        <div class="card-image-container"><img src={product.image || '/placeholder.png'} alt={product.title || 'Product Image'} loading="lazy" /></div>
+        <div class="card-image-container"><img src={product.image || '/favicon.png'} alt={product.title || 'Product Image'} loading="lazy" /></div>
         <div class="card-content">
           <span class="card-category">{product.category || 'Uncategorized'}</span>
           <h3 class="card-title">{product.title || 'Untitled Product'}</h3>
@@ -48,12 +47,11 @@ const categories = ['All', ...new Set(products.map(p => p.category))];
   </div>
 </MainLayout>
 
-<!-- The script and style tags remain the same -->
+<!-- Script and Style tags remain unchanged -->
 <script>
   const searchBar=document.getElementById("search-bar") as HTMLInputElement;const categoryContainer=document.getElementById("category-filters");const productCards=document.querySelectorAll(".product-card") as NodeListOf<HTMLElement>;let activeCategory="All";function filterProducts(){const searchTerm=searchBar.value.toLowerCase().trim();productCards.forEach(card=>{const isCategoryMatch=activeCategory==="All"||card.dataset.category===activeCategory;const isSearchMatch=card.dataset.name?.toLowerCase().includes(searchTerm);card.style.display=isCategoryMatch&&isSearchMatch?"flex":"none"})}categoryContainer?.addEventListener("click",e=>{const target=e.target as HTMLElement;if(target.matches(".filter-btn")){categoryContainer.querySelector(".active")?.classList.remove("active");target.classList.add("active");activeCategory=target.dataset.category||"All";filterProducts()}});searchBar.addEventListener("input",filterProducts);
 </script>
 <style>
-  /* The style block from the previous alignment fix is unchanged */
   .filters{margin-bottom:2rem;display:flex;flex-direction:column;gap:1rem}
   #search-bar{width:100%;padding:.8rem 1.25rem;font-size:1rem;border-radius:12px;border:1px solid var(--border-color);background-color:var(--secondary-bg-color);color:var(--text-color)}
   .category-filters{display:flex;flex-wrap:wrap;gap:.75rem}

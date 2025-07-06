@@ -2,9 +2,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import { TELEGRAM_CONTACT_LINK } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
-import type { Database } from '../../lib/database.types';
-
-type Product = Database['public']['Tables']['products']['Row'];
+import { type Product } from '../../types'; // Import our new Product type
 
 const { id } = Astro.params;
 let product: Product | null = null;
@@ -24,7 +22,8 @@ if (!id || isNaN(Number(id))) {
       console.error('Supabase fetch error:', error.message);
       fetchError = `Product not found or database error: ${error.message}`;
     } else {
-      product = data;
+      // We cast the single data object to our Product type
+      product = data as Product;
     }
   } catch (e) {
     console.error('Catch block error:', e);
@@ -38,26 +37,27 @@ if (!product) {
   });
 }
 
-// !!! FIXED: Added fallbacks for potentially null values !!!
-const { title = 'Untitled Product', price = 0, images, category = 'Uncategorized', description = 'No description available.' } = product;
+// No need for default values here anymore because we've handled the !product case
+const { title, price, images, category, description } = product;
+// We still check if images is an array before trying to map it
 const imageArray = Array.isArray(images) ? images : (product.image ? [product.image] : []);
 ---
-<MainLayout title={title}>
+<MainLayout title={title || 'Product Details'}>
   <a href="/" class="back-link">← Back to Catalog</a>
 
   <div class="product-detail">
     <div class="product-images">
       {imageArray.length > 0 ? (
-        imageArray.map(img => <img src={img} alt={title} loading="lazy" />)
+        imageArray.map(img => <img src={img} alt={title || 'Product'} loading="lazy" />)
       ) : (
-        <div class="placeholder-image">No Image</div>
+        <div class="placeholder-image">No Image Available</div>
       )}
     </div>
     <div class="product-info">
-      <p class="category">{category}</p>
-      <h1>{title}</h1>
-      <div class="price">${price.toFixed(2)}</div>
-      <div class="description"><p>{description}</p></div>
+      <p class="category">{category || 'Uncategorized'}</p>
+      <h1>{title || 'Untitled Product'}</h1>
+      <div class="price">${(price || 0).toFixed(2)}</div>
+      <div class="description"><p>{description || 'No description available.'}</p></div>
       <a href={TELEGRAM_CONTACT_LINK} class="cta-button" target="_blank">Order on Telegram</a>
     </div>
   </div>
