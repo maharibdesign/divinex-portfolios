@@ -2,7 +2,7 @@
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { supabase } from '../../../lib/supabase';
 import { type Product } from '../../../types';
-import '../../../styles/admin.css'; // Import the new shared styles
+import '../../../styles/admin.css';
 
 const { id } = Astro.params;
 let product: Product | null = null;
@@ -18,10 +18,11 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
       <h1>Edit Product</h1>
       <a href="/admin" class="back-link">← Back to Admin Panel</a>
     </header>
-    
     <section class="admin-section">
       <form id="edit-product-form" class="product-form">
         <input type="hidden" name="id" value={product.id} />
+        <input type="hidden" name="image" id="main-image-url" value={product.image || ''} />
+        <input type="hidden" name="images" id="gallery-images-url" value={JSON.stringify(product.images || [])} />
         <label>Title <input type="text" name="title" value={product.title || ''} required /></label>
         <label>Description <textarea name="description" rows="4" required>{product.description || ''}</textarea></label>
         <div class="form-row">
@@ -35,14 +36,15 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
           </label>
           <label>Price <input type="number" name="price" step="0.01" value={product.price || 0} required /></label>
         </div>
-        <!-- Re-added image fields for editing URL, upload can be added later -->
-        <label>Main Image URL <input type="text" name="image" value={product.image || ''} required /></label>
-        <label>Gallery Image URLs (as a JSON array)
-          <input type="text" name="images" value={JSON.stringify(product.images || [])} required />
-        </label>
+        <label>Replace Main Image (Optional) <input type="file" id="main-image-upload" accept="image/*" /></label>
+        <div class="image-preview-wrapper">
+          <span>Current:</span>
+          <img src={product.image || '/favicon.svg'} alt="Current main image" class="image-preview" />
+        </div>
         <div class="form-actions">
+          <div id="form-status" class="upload-status"></div>
           <a href="/admin" class="btn btn-secondary">Cancel</a>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="submit" id="submit-btn" class="btn btn-primary">Save Changes</button>
         </div>
       </form>
     </section>
@@ -50,29 +52,63 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
 </MainLayout>
 <script>
   const editForm = document.getElementById('edit-product-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const formStatus = document.getElementById('form-status');
+  const mainImageUpload = document.getElementById('main-image-upload');
+  const mainImageUrlInput = document.getElementById('main-image-url');
+  const galleryImagesUrlInput = document.getElementById('gallery-images-url');
+
+  async function uploadFile(file) {
+    const response = await fetch('/api/products/upload', {
+      method: 'POST', body: file, headers: { 'Content-Type': file.type }
+    });
+    if (!response.ok) { throw new Error('Upload failed.'); }
+    return (await response.json()).url;
+  }
+
   editForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const formData = new FormData(editForm);
-    const productData = {
-      id: formData.get('id'),
-      title: formData.get('title'),
-      description: formData.get('description'),
-      category: formData.get('category'),
-      price: parseFloat(formData.get('price') as string),
-      image: formData.get('image'),
-      images: JSON.parse(formData.get('images') as string)
-    };
-    const response = await fetch('/api/products/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(productData),
-    });
-    if (response.ok) {
-      alert('Product updated successfully!');
-      window.location.href = '/admin';
-    } else {
-      const result = await response.json();
-      alert(`Error updating product: ${result.error}`);
+    submitBtn.disabled = true;
+    formStatus.textContent = 'Processing...';
+
+    const newImageFile = mainImageUpload.files[0];
+
+    try {
+      if (newImageFile) {
+        formStatus.textContent = 'Uploading new image...';
+        const uploadedImageUrl = await uploadFile(newImageFile);
+        mainImageUrlInput.value = uploadedImageUrl;
+        galleryImagesUrlInput.value = JSON.stringify([uploadedImageUrl]);
+      }
+      
+      formStatus.textContent = 'Saving product data...';
+      const formData = new FormData(editForm);
+      const productData = {
+        id: formData.get('id'),
+        title: formData.get('title'),
+        description: formData.get('description'),
+        category: formData.get('category'),
+        price: parseFloat(formData.get('price') as string),
+        image: formData.get('image'),
+        images: JSON.parse(formData.get('images') as string)
+      };
+
+      const response = await fetch('/api/products/update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+
+      if (response.ok) {
+        alert('Product updated successfully!');
+        window.location.href = '/admin';
+      } else {
+        const result = await response.json();
+        throw new Error(`Failed to update product: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`An error occurred: ${error.message}`);
+      formStatus.textContent = '';
+      submitBtn.disabled = false;
     }
   });
 </script>
