@@ -16,14 +16,10 @@ const { title } = Astro.props;
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 		<title>{title}</title>
 
-    <!-- !!! NEW: Comprehensive Favicon and App Icon Setup !!! -->
-    <!-- Assumes your icon is named 'favicon.png' in the public/ folder -->
-    <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="/favicon.png" sizes="16x16">
-    <!-- This is the icon for 'Add to Home Screen' on Apple devices -->
-    <link rel="apple-touch-icon" href="/favicon.png" sizes="180x180">
-    <!-- A general icon for other uses -->
-    <link rel="shortcut icon" href="/favicon.png">
+    <!-- !!! UPDATED: Using the SVG for the best quality !!! -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <!-- A fallback PNG can be added here if needed, but SVG is preferred -->
+    <link rel="apple-touch-icon" href="/favicon.svg">
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 	</head>
