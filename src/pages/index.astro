@@ -23,8 +23,6 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   </div>
   <div id="product-grid">
     {products.map(product => (
-      <!-- !!! THIS IS THE CRUCIAL FIX !!! -->
-      <!-- We are re-adding the data-name and data-category attributes -->
       <a 
         href={`/products/${product.id}/`} 
         class="product-card" 
@@ -49,29 +47,20 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
 </MainLayout>
 
 <script>
-  // This script is now guaranteed to work because the data- attributes are back.
   const searchBar = document.getElementById('search-bar') as HTMLInputElement;
   const categoryContainer = document.getElementById('category-filters');
   const productCards = document.querySelectorAll('.product-card') as NodeListOf<HTMLElement>;
-  
   let activeCategory = 'All';
-
   function filterProducts() {
     const searchTerm = searchBar.value.toLowerCase().trim();
-
     productCards.forEach(card => {
-      // These lines read the data attributes we just re-added.
       const cardName = card.dataset.name || '';
       const cardCategory = card.dataset.category || '';
-
       const isCategoryMatch = activeCategory === 'All' || cardCategory === activeCategory;
       const isSearchMatch = cardName.includes(searchTerm);
-      
-      // We use 'display: flex' because our cards are flex containers.
       card.style.display = isCategoryMatch && isSearchMatch ? 'flex' : 'none';
     });
   }
-
   categoryContainer?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     if (target.matches('.filter-btn')) {
@@ -81,15 +70,12 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
       filterProducts();
     }
   });
-
   searchBar.addEventListener('input', filterProducts);
-
-  // Run the filter once on page load to set the initial state
   filterProducts();
 </script>
 
 <style>
-  /* All styles from the "Final Polish Pass" are correct and remain unchanged. */
+  /* Styles up to product-grid are unchanged */
   .filters{margin-bottom:2rem;display:flex;flex-direction:column;gap:1rem}
   #search-bar{width:100%;padding:.8rem 1.25rem;font-size:1rem;border-radius:16px;border:1px solid var(--border-color);background-color:var(--secondary-bg-color);color:var(--text-color)}
   .category-filters{display:flex;flex-wrap:wrap;gap:.75rem}
@@ -101,7 +87,9 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   @media(min-width:1024px){#product-grid{grid-template-columns:repeat(5,1fr);}}
   
   .product-card {
-    background-color: var(--secondary-bg-color); border-radius: 24px;
+    background-color: var(--secondary-bg-color);
+    /* !!! UPDATED: Softer, more pronounced rounded corners !!! */
+    border-radius: 28px;
     overflow: hidden; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 1px solid var(--border-color); display: flex; flex-direction: column;
   }
@@ -109,7 +97,11 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   .dark .product-card:hover { box-shadow: 0 0 25px color-mix(in srgb, var(--link-color) 15%, transparent); }
   
   .card-image-container { width: 100%; aspect-ratio: 1.618 / 1; flex-shrink: 0; background-color: var(--secondary-bg-color); padding: 0.75rem; }
-  .product-card img { width: 100%; height: 100%; object-fit: contain; border-radius: 16px; }
+  .product-card img {
+    width: 100%; height: 100%; object-fit: contain;
+    /* !!! UPDATED: Matching softer rounded corners for the image !!! */
+    border-radius: 20px;
+  }
   
   .card-content { padding: 0 1rem 1rem 1rem; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
   .card-category { font-size:.7rem; font-weight:600; color:var(--hint-color); text-transform:uppercase; }
