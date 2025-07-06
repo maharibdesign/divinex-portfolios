@@ -3,9 +3,10 @@ const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
 ---
 <header>
   <nav>
-    <!-- !!! UPDATED: This now points specifically to logo.svg !!! -->
     <a href="/" class="brand-logo-link" aria-label="Storeka Homepage">
-      <img src="/logo.svg" alt="Storeka Logo" class="brand-logo-img" />
+      <!-- !!! NEW: Both logos are included here !!! -->
+      <img src="/logo-light.svg" alt="Storeka Logo" class="brand-logo-img logo-light" />
+      <img src="/logo-dark.svg" alt="Storeka Logo" class="brand-logo-img logo-dark" />
     </a>
     
     <div class="nav-actions">
@@ -63,6 +64,20 @@ const ADMIN_ID = import.meta.env.ADMIN_TELEGRAM_ID;
   }
   .brand-logo-link { display: flex; align-items: center; height: 100%; }
   .brand-logo-img { height: 32px; width: auto; }
+  
+  /* !!! NEW: CSS logic to toggle logo visibility !!! */
+  /* By default, hide the dark logo */
+  .logo-dark {
+    display: none;
+  }
+  /* When the html element has the .dark class, HIDE the light logo... */
+  .dark .logo-light {
+    display: none;
+  }
+  /* ...and SHOW the dark logo */
+  .dark .logo-dark {
+    display: block;
+  }
   
   .nav-actions { display: flex; align-items: center; gap: 0.5rem; }
   .admin-button {
