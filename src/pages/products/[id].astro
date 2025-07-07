@@ -2,7 +2,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import { TELEGRAM_CONTACT_LINK } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
-import { type Product } from '../../types';
+import { type Product } from '@/lib/types';
 
 const { id } = Astro.params;
 let product: Product | null = null;
@@ -16,7 +16,6 @@ else {
   } catch (e) { fetchError = 'A server error occurred.'; }
 }
 if (!product) { return new Response(`Error: ${fetchError || 'Product could not be loaded.'}`, { status: 404 }); }
-
 const { title, price, images, category, description } = product;
 const imageArray = Array.isArray(images) ? images : (product.image ? [product.image] : []);
 ---
