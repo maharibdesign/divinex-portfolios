@@ -27,11 +27,18 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
         <label>Description <textarea name="description" rows="4" required>{product.description || ''}</textarea></label>
         <div class="form-row">
           <label>Category
+            <!-- !!! UPDATED CATEGORY LIST !!! -->
             <select name="category" required>
-              <option value="Phones" selected={product.category === 'Phones'}>Phones</option>
-              <option value="Laptops" selected={product.category === 'Laptops'}>Laptops</option>
-              <option value="Watches" selected={product.category === 'Watches'}>Watches</option>
               <option value="Accessories" selected={product.category === 'Accessories'}>Accessories</option>
+              <option value="Apparel" selected={product.category === 'Apparel'}>Apparel</option>
+              <option value="Books" selected={product.category === 'Books'}>Books</option>
+              <option value="Home Goods" selected={product.category === 'Home Goods'}>Home Goods</option>
+              <option value="Laptops" selected={product.category === 'Laptops'}>Laptops</option>
+              <option value="Perfumes" selected={product.category === 'Perfumes'}>Perfumes</option>
+              <option value="Phones" selected={product.category === 'Phones'}>Phones</option>
+              <option value="Shoes" selected={product.category === 'Shoes'}>Shoes</option>
+              <option value="Skincare" selected={product.category === 'Skincare'}>Skincare</option>
+              <option value="Watches" selected={product.category === 'Watches'}>Watches</option>
             </select>
           </label>
           <label>Price <input type="number" name="price" step="0.01" value={product.price || 0} required /></label>
