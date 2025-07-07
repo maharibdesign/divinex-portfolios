@@ -22,11 +22,11 @@ try {
         <label>Description <textarea name="description" rows="4" required></textarea></label>
         <div class="form-row">
           <label>Category
-            <!-- !!! UPDATED CATEGORY LIST !!! -->
             <select name="category" required>
               <option value="Accessories">Accessories</option>
               <option value="Apparel">Apparel</option>
               <option value="Books">Books</option>
+              <option value="Combo Deals">Combo Deals</option>
               <option value="Home Goods">Home Goods</option>
               <option value="Laptops">Laptops</option>
               <option value="Perfumes">Perfumes</option>
@@ -36,7 +36,7 @@ try {
               <option value="Watches">Watches</option>
             </select>
           </label>
-          <label>Price <input type="number" name="price" step="0.01" required /></label>
+          <label>Price (in Birr) <input type="number" name="price" step="0.01" required /></label>
         </div>
         <label>Main Image <input type="file" id="main-image-upload" accept="image/*" required /></label>
         <input type="hidden" name="image" id="main-image-url" />
@@ -66,15 +66,17 @@ try {
   </div>
 </MainLayout>
 <script>
-  const addForm = document.getElementById('add-product-form');
-  const mainImageUpload = document.getElementById('main-image-upload');
-  const mainImageUrlInput = document.getElementById('main-image-url');
-  const galleryImagesUrlInput = document.getElementById('gallery-images-url');
-  const submitBtn = document.getElementById('submit-btn');
-  const formStatus = document.getElementById('form-status');
-  const productList = document.getElementById('product-list');
+  // Type-Safe Element Selectors
+  const addForm = document.getElementById('add-product-form') as HTMLFormElement | null;
+  const mainImageUpload = document.getElementById('main-image-upload') as HTMLInputElement | null;
+  const mainImageUrlInput = document.getElementById('main-image-url') as HTMLInputElement | null;
+  const galleryImagesUrlInput = document.getElementById('gallery-images-url') as HTMLInputElement | null;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+  const productList = document.getElementById('product-list') as HTMLUListElement | null;
 
-  async function uploadFile(file) {
+  // Type-Safe uploadFile function
+  async function uploadFile(file: File): Promise<string> {
     const response = await fetch('/api/products/upload', {
       method: 'POST', body: file, headers: { 'Content-Type': file.type }
     });
@@ -86,18 +88,22 @@ try {
     return result.url;
   }
 
+  // Type-Safe Event Listeners
   addForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!submitBtn || !formStatus || !mainImageUpload || !mainImageUrlInput || !galleryImagesUrlInput) return;
+
     submitBtn.disabled = true;
     formStatus.textContent = 'Uploading image...';
 
-    const mainImageFile = mainImageUpload.files[0];
+    const mainImageFile = mainImageUpload.files?.[0];
     if (!mainImageFile) {
       alert('Please select a main image.');
       submitBtn.disabled = false;
       formStatus.textContent = '';
       return;
     }
+
     try {
       const uploadedImageUrl = await uploadFile(mainImageFile);
       mainImageUrlInput.value = uploadedImageUrl;
@@ -126,7 +132,8 @@ try {
         const result = await productResponse.json();
         throw new Error(`Failed to add product data: ${result.error}`);
       }
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       alert(`An error occurred: ${error.message}`);
       formStatus.textContent = '';
       submitBtn.disabled = false;

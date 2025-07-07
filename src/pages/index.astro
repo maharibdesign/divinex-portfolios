@@ -5,13 +5,8 @@ import { type Product } from '../types';
 let products: Product[] = [];
 try {
   const response = await fetch(`${Astro.url.origin}/api/products/get`);
-  if (response.ok) {
-    products = await response.json() as Product[];
-  }
-} catch (error) {
-  console.error("Fetch failed for homepage:", error);
-}
-
+  if (response.ok) { products = await response.json() as Product[]; }
+} catch (error) { console.error("Fetch failed for homepage:", error); }
 const categories = ['All', ...new Set(products.map(p => p.category || ''))].filter(Boolean);
 ---
 <MainLayout title="Storeka - Modern Product Catalog">
@@ -23,21 +18,14 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   </div>
   <div id="product-grid">
     {products.map(product => (
-      <a 
-        href={`/products/${product.id}/`} 
-        class="product-card" 
-        data-name={(product.title || '').toLowerCase()} 
-        data-category={product.category || 'Uncategorized'}
-      >
-        <div class="card-image-container">
-          <img src={product.image || '/favicon.png'} alt={product.title || 'Product Image'} loading="lazy" />
-        </div>
+      <a href={`/products/${product.id}/`} class="product-card" data-name={(product.title || '').toLowerCase()} data-category={product.category || 'Uncategorized'}>
+        <div class="card-image-container"><img src={product.image || '/favicon.png'} alt={product.title || 'Product Image'} loading="lazy" /></div>
         <div class="card-content">
           <span class="card-category">{product.category || 'Uncategorized'}</span>
           <h3 class="card-title">{product.title || 'Untitled Product'}</h3>
           <p class="card-description">{product.description || 'No description available.'}</p>
           <div class="card-footer">
-            <p class="card-price">${(product.price || 0).toFixed(2)}</p>
+            <p class="card-price">{(product.price || 0).toLocaleString()} Birr</p>
             <span class="card-button">View</span>
           </div>
         </div>
@@ -45,7 +33,6 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
     ))}
   </div>
 </MainLayout>
-
 <script>
   const searchBar = document.getElementById('search-bar') as HTMLInputElement;
   const categoryContainer = document.getElementById('category-filters');
@@ -73,42 +60,28 @@ const categories = ['All', ...new Set(products.map(p => p.category || ''))].filt
   searchBar.addEventListener('input', filterProducts);
   filterProducts();
 </script>
-
 <style>
-  /* Styles up to product-grid are unchanged */
   .filters{margin-bottom:2rem;display:flex;flex-direction:column;gap:1rem}
   #search-bar{width:100%;padding:.8rem 1.25rem;font-size:1rem;border-radius:16px;border:1px solid var(--border-color);background-color:var(--secondary-bg-color);color:var(--text-color)}
   .category-filters{display:flex;flex-wrap:wrap;gap:.75rem}
   .filter-btn{padding:.5rem 1rem;font-size:.9rem;font-weight:500;border:none;border-radius:12px;background-color:var(--secondary-bg-color);color:var(--text-color);cursor:pointer;transition:.2s}
   .filter-btn.active{background-color:var(--button-color);color:var(--button-text-color)}
-  
   #product-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; }
   @media(min-width: 640px){#product-grid{grid-template-columns:repeat(3,1fr);}}
   @media(min-width:1024px){#product-grid{grid-template-columns:repeat(5,1fr);}}
-  
-  .product-card {
-    background-color: var(--secondary-bg-color);
-    /* !!! UPDATED: Softer, more pronounced rounded corners !!! */
-    border-radius: 28px;
-    overflow: hidden; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid var(--border-color); display: flex; flex-direction: column;
-  }
+  .product-card { background-color: var(--secondary-bg-color); border-radius: 28px; overflow: hidden; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; border: 1px solid var(--border-color); display: flex; flex-direction: column; }
   .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.07); }
   .dark .product-card:hover { box-shadow: 0 0 25px color-mix(in srgb, var(--link-color) 15%, transparent); }
-  
   .card-image-container { width: 100%; aspect-ratio: 1.618 / 1; flex-shrink: 0; background-color: var(--secondary-bg-color); padding: 0.75rem; }
-  .product-card img {
-    width: 100%; height: 100%; object-fit: contain;
-    /* !!! UPDATED: Matching softer rounded corners for the image !!! */
-    border-radius: 20px;
-  }
-  
+  .product-card img { width: 100%; height: 100%; object-fit: contain; border-radius: 20px; }
   .card-content { padding: 0 1rem 1rem 1rem; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
   .card-category { font-size:.7rem; font-weight:600; color:var(--hint-color); text-transform:uppercase; }
   .card-title { font-size: 0.9rem; font-weight: 600; color:var(--text-color); margin: 0.25rem 0 0.5rem; line-height: 1.3; }
   .card-description {
-    font-size: 0.85rem; color: var(--hint-color); line-height: 1.4; margin: 0;
-    flex-grow: 1; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+    font-size: 0.85rem; color: var(--hint-color);
+    .dark & { color: #b0b0b5; }
+    line-height: 1.4; margin: 0; flex-grow: 1; white-space: pre-wrap;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
     overflow: hidden; text-overflow: ellipsis;
   }
   .card-footer { display:flex; justify-content:space-between; align-items:center; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }

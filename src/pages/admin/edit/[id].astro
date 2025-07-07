@@ -27,11 +27,11 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
         <label>Description <textarea name="description" rows="4" required>{product.description || ''}</textarea></label>
         <div class="form-row">
           <label>Category
-            <!-- !!! UPDATED CATEGORY LIST !!! -->
             <select name="category" required>
               <option value="Accessories" selected={product.category === 'Accessories'}>Accessories</option>
               <option value="Apparel" selected={product.category === 'Apparel'}>Apparel</option>
               <option value="Books" selected={product.category === 'Books'}>Books</option>
+              <option value="Combo Deals" selected={product.category === 'Combo Deals'}>Combo Deals</option>
               <option value="Home Goods" selected={product.category === 'Home Goods'}>Home Goods</option>
               <option value="Laptops" selected={product.category === 'Laptops'}>Laptops</option>
               <option value="Perfumes" selected={product.category === 'Perfumes'}>Perfumes</option>
@@ -41,7 +41,7 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
               <option value="Watches" selected={product.category === 'Watches'}>Watches</option>
             </select>
           </label>
-          <label>Price <input type="number" name="price" step="0.01" value={product.price || 0} required /></label>
+          <label>Price (in Birr) <input type="number" name="price" step="0.01" value={product.price || 0} required /></label>
         </div>
         <label>Replace Main Image (Optional) <input type="file" id="main-image-upload" accept="image/*" /></label>
         <div class="image-preview-wrapper">
@@ -58,14 +58,16 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
   </div>
 </MainLayout>
 <script>
-  const editForm = document.getElementById('edit-product-form');
-  const submitBtn = document.getElementById('submit-btn');
-  const formStatus = document.getElementById('form-status');
-  const mainImageUpload = document.getElementById('main-image-upload');
-  const mainImageUrlInput = document.getElementById('main-image-url');
-  const galleryImagesUrlInput = document.getElementById('gallery-images-url');
+  // Type-Safe Element Selectors
+  const editForm = document.getElementById('edit-product-form') as HTMLFormElement | null;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+  const mainImageUpload = document.getElementById('main-image-upload') as HTMLInputElement | null;
+  const mainImageUrlInput = document.getElementById('main-image-url') as HTMLInputElement | null;
+  const galleryImagesUrlInput = document.getElementById('gallery-images-url') as HTMLInputElement | null;
 
-  async function uploadFile(file) {
+  // Type-Safe uploadFile function
+  async function uploadFile(file: File): Promise<string> {
     const response = await fetch('/api/products/upload', {
       method: 'POST', body: file, headers: { 'Content-Type': file.type }
     });
@@ -73,12 +75,15 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
     return (await response.json()).url;
   }
 
+  // Type-Safe Event Listener
   editForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!submitBtn || !formStatus || !mainImageUpload || !mainImageUrlInput || !galleryImagesUrlInput) return;
+    
     submitBtn.disabled = true;
     formStatus.textContent = 'Processing...';
 
-    const newImageFile = mainImageUpload.files[0];
+    const newImageFile = mainImageUpload.files?.[0];
 
     try {
       if (newImageFile) {
@@ -112,7 +117,8 @@ if (!product) { return new Response("Product not found", { status: 404 }); }
         const result = await response.json();
         throw new Error(`Failed to update product: ${result.error}`);
       }
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       alert(`An error occurred: ${error.message}`);
       formStatus.textContent = '';
       submitBtn.disabled = false;
