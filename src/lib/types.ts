@@ -1,10 +1,6 @@
-export interface Product {
-  id: number;
-  created_at: string;
-  title: string | null;
-  description: string | null;
-  category: string | null;
-  price: number | null;
-  image: string | null;
-  images: string[] | null; 
-}
+import type { Database } from './database.types';
+
+// We define our Project type as a direct reference to the 'projects' table
+// in the auto-generated Database types.
+// This is robust, accurate, and automatically updates if we re-generate.
+export type Project = Database['public']['Tables']['projects']['Row'];
