@@ -20,11 +20,105 @@ if (!project) { return new Response("Project not found", { status: 404 }); }
     </header>
     <section class="admin-section">
       <form id="edit-project-form" class="project-form">
-        <!-- Fields pre-filled with project data -->
+        <input type="hidden" name="id" value={project.id} />
+        <input type="hidden" name="cover_image" id="cover-image-url" value={project.cover_image || ''} />
+        
+        <div class="form-row">
+            <label>Title <input type="text" name="title" value={project.title || ''} required /></label>
+            <label>Client <input type="text" name="client" value={project.client || ''} /></label>
+        </div>
+        <label>Category
+          <select name="category" required>
+            <option value="UI/UX" selected={project.category === 'UI/UX'}>UI/UX</option>
+            <option value="Branding" selected={project.category === 'Branding'}>Branding</option>
+            <option value="Illustration" selected={project.category === 'Illustration'}>Illustration</option>
+            <option value="Web Design" selected={project.category === 'Web Design'}>Web Design</option>
+          </select>
+        </label>
+        <label>Short Description <textarea name="description" rows="2">{project.description || ''}</textarea></label>
+        <label>Full Case Study (Markdown) <textarea name="content" rows="8">{project.content || ''}</textarea></label>
+        
+        <label>Replace Cover Image (Optional) <input type="file" id="cover-image-upload" accept="image/*" /></label>
+        <div class="image-preview-wrapper">
+          <span>Current:</span>
+          <img src={project.cover_image || '/favicon.svg'} alt="Current cover image" class="image-preview" />
+        </div>
+        
+        <div class="form-actions">
+          <div id="form-status" class="upload-status"></div>
+          <a href="/admin" class="btn btn-secondary">Cancel</a>
+          <button type="submit" id="submit-btn" class="btn btn-primary">Save Changes</button>
+        </div>
       </form>
     </section>
   </div>
 </MainLayout>
 <script>
-  // Edit Project Logic
+  // --- Type-Safe Element Selectors ---
+  const editForm = document.getElementById('edit-project-form') as HTMLFormElement | null;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+  const coverImageUpload = document.getElementById('cover-image-upload') as HTMLInputElement | null;
+  const coverImageUrlInput = document.getElementById('cover-image-url') as HTMLInputElement | null;
+
+  // --- Type-Safe uploadFile function ---
+  async function uploadFile(file: File): Promise<string> {
+    const response = await fetch('/api/projects/upload', {
+      method: 'POST', body: file, headers: { 'Content-Type': file.type }
+    });
+    if (!response.ok) { throw new Error('Upload failed.'); }
+    return (await response.json()).url;
+  }
+
+  // --- Edit Project Event Listener ---
+  editForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!submitBtn || !formStatus || !coverImageUpload || !coverImageUrlInput) return;
+    
+    submitBtn.disabled = true;
+    formStatus.textContent = 'Processing...';
+
+    const newImageFile = coverImageUpload.files?.[0];
+
+    try {
+      if (newImageFile) {
+        formStatus.textContent = 'Uploading new cover image...';
+        const uploadedImageUrl = await uploadFile(newImageFile);
+        coverImageUrlInput.value = uploadedImageUrl;
+      }
+      
+      formStatus.textContent = 'Saving project data...';
+      const formData = new FormData(editForm);
+      const projectData = {
+        id: formData.get('id'),
+        title: formData.get('title'),
+        client: formData.get('client'),
+        category: formData.get('category'),
+        description: formData.get('description'),
+        content: formData.get('content'),
+        cover_image: formData.get('cover_image'),
+        // For now, we assume the gallery is just the cover image.
+        gallery_images: [formData.get('cover_image')]
+      };
+
+      const response = await fetch('/api/projects/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData),
+      });
+
+      if (response.ok) {
+        alert('Project updated successfully!');
+        window.location.href = '/admin';
+      } else {
+        const result = await response.json();
+        throw new Error(`Failed to update project: ${result.error}`);
+      }
+    } catch (err) {
+      const error = err as Error;
+      alert(`An error occurred: ${error.message}`);
+      formStatus.textContent = '';
+      submitBtn.disabled = false;
+    }
+  });
 </script>

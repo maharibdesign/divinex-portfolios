@@ -7,7 +7,7 @@ let projects: Project[] = [];
 try {
   const response = await fetch(`${Astro.url.origin}/api/projects/get`);
   if (response.ok) { projects = await response.json() as Project[]; }
-} catch (e) { /* ignore */ }
+} catch (e) { console.error("Could not fetch projects for admin list."); }
 ---
 <MainLayout title="Project Manager - Divinex">
   <div class="admin-panel">
@@ -58,5 +58,97 @@ try {
   </div>
 </MainLayout>
 <script>
-  // Add Project Logic
+  // --- Type-Safe Element Selectors ---
+  const addForm = document.getElementById('add-project-form') as HTMLFormElement | null;
+  const coverImageUpload = document.getElementById('cover-image-upload') as HTMLInputElement | null;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+  const projectList = document.getElementById('project-list') as HTMLUListElement | null;
+
+  // --- Type-Safe uploadFile function ---
+  async function uploadFile(file: File): Promise<string> {
+    const response = await fetch('/api/projects/upload', {
+      method: 'POST', body: file, headers: { 'Content-Type': file.type }
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(`Upload failed: ${result.error}`);
+    }
+    const result = await response.json();
+    return result.url;
+  }
+
+  // --- Add Project Event Listener ---
+  addForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!submitBtn || !formStatus || !coverImageUpload) return;
+
+    submitBtn.disabled = true;
+    formStatus.textContent = 'Uploading cover image...';
+
+    const coverImageFile = coverImageUpload.files?.[0];
+    if (!coverImageFile) {
+      alert('Please select a cover image.');
+      submitBtn.disabled = false;
+      formStatus.textContent = '';
+      return;
+    }
+
+    try {
+      const uploadedImageUrl = await uploadFile(coverImageFile);
+      formStatus.textContent = 'Image uploaded! Submitting project...';
+
+      const formData = new FormData(addForm);
+      const projectData = {
+        title: formData.get('title'),
+        client: formData.get('client'),
+        category: formData.get('category'),
+        description: formData.get('description'),
+        content: formData.get('content'),
+        cover_image: uploadedImageUrl,
+        // For now, the gallery is just the cover image. We can expand this later.
+        gallery_images: [uploadedImageUrl] 
+      };
+
+      const projectResponse = await fetch('/api/projects/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData),
+      });
+
+      if (projectResponse.ok) {
+        alert('Project added successfully!');
+        window.location.reload();
+      } else {
+        const result = await projectResponse.json();
+        throw new Error(`Failed to add project data: ${result.error}`);
+      }
+    } catch (err) {
+      const error = err as Error;
+      alert(`An error occurred: ${error.message}`);
+      formStatus.textContent = '';
+      submitBtn.disabled = false;
+    }
+  });
+
+  // --- Delete Project Event Listener ---
+  projectList?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    if (target.matches('.btn-delete')) {
+      const projectId = target.dataset.projectId;
+      if (!projectId) return;
+      if (confirm('Are you sure you want to delete this project?')) {
+        const response = await fetch('/api/projects/delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: projectId }),
+        });
+        if (response.ok) {
+          target.closest('li')?.remove();
+          alert('Project deleted.');
+        } else {
+          const result = await response.json();
+          alert(`Error deleting project: ${result.error}`);
+        }
+      }
+    }
+  });
 </script>
