@@ -1,63 +1,55 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import { type Product } from '../types';
+import { type Project } from '@/lib/types';
 import '../styles/admin.css';
 
-let products: Product[] = [];
+let projects: Project[] = [];
 try {
-  const response = await fetch(`${Astro.url.origin}/api/products/get`);
-  if (response.ok) { products = await response.json() as Product[]; }
-} catch (error) { console.error("Fetch failed for admin page:", error); }
+  const response = await fetch(`${Astro.url.origin}/api/projects/get`);
+  if (response.ok) { projects = await response.json() as Project[]; }
+} catch (e) { /* ignore */ }
 ---
-<MainLayout title="Admin Panel - Storeka">
+<MainLayout title="Project Manager - Divinex">
   <div class="admin-panel">
     <header class="admin-header">
-      <h1>Admin Panel</h1>
-      <a href="/" class="back-link">← Back to Store</a>
+      <h1>Project Manager</h1>
+      <a href="/" class="back-link">← Back to Portfolio</a>
     </header>
     <section class="admin-section">
-      <h2>Add New Product</h2>
-      <form id="add-product-form" class="product-form">
-        <label>Title <input type="text" name="title" required /></label>
-        <label>Description <textarea name="description" rows="4" required></textarea></label>
+      <h2>Add New Project</h2>
+      <form id="add-project-form" class="project-form">
         <div class="form-row">
-          <label>Category
-            <select name="category" required>
-              <option value="Accessories">Accessories</option>
-              <option value="Apparel">Apparel</option>
-              <option value="Books">Books</option>
-              <option value="Combo Deals">Combo Deals</option>
-              <option value="Home Goods">Home Goods</option>
-              <option value="Laptops">Laptops</option>
-              <option value="Perfumes">Perfumes</option>
-              <option value="Phones">Phones</option>
-              <option value="Shoes">Shoes</option>
-              <option value="Skincare">Skincare</option>
-              <option value="Watches">Watches</option>
-            </select>
-          </label>
-          <label>Price (in Birr) <input type="number" name="price" step="0.01" required /></label>
+          <label>Title <input type="text" name="title" required /></label>
+          <label>Client <input type="text" name="client" placeholder="e.g., Personal Project" /></label>
         </div>
-        <label>Main Image <input type="file" id="main-image-upload" accept="image/*" required /></label>
-        <input type="hidden" name="image" id="main-image-url" />
-        <input type="hidden" name="images" id="gallery-images-url" />
+        <label>Category
+          <select name="category" required>
+            <option value="UI/UX">UI/UX</option>
+            <option value="Branding">Branding</option>
+            <option value="Illustration">Illustration</option>
+            <option value="Web Design">Web Design</option>
+          </select>
+        </label>
+        <label>Short Description (for card) <textarea name="description" rows="2"></textarea></label>
+        <label>Full Case Study (Markdown supported) <textarea name="content" rows="8"></textarea></label>
+        <label>Cover Image <input type="file" id="cover-image-upload" accept="image/*" required /></label>
         <div class="form-actions">
           <div id="form-status" class="upload-status"></div>
           <a href="/admin" class="btn btn-secondary">Cancel</a>
-          <button type="submit" id="submit-btn" class="btn btn-primary">Add Product</button>
+          <button type="submit" id="submit-btn" class="btn btn-primary">Add Project</button>
         </div>
       </form>
     </section>
     <section class="admin-section">
-      <h2>Manage Existing Products</h2>
-      <ul class="product-list" id="product-list">
-        {products.map(product => (
+      <h2>Manage Projects</h2>
+      <ul class="project-list" id="project-list">
+        {projects.map(p => (
           <li>
-            <img src={product.image || '/favicon.svg'} alt={product.title || ''} class="product-thumb" />
-            <span class="product-title">{product.title || 'Untitled'}</span>
-            <div class="product-actions">
-              <a href={`/admin/edit/${product.id}`} class="btn-action btn-edit">Edit</a>
-              <button class="btn-action btn-delete" data-product-id={product.id}>Delete</button>
+            <img src={p.cover_image || '/favicon.svg'} alt={p.title || ''} class="project-thumb" />
+            <span class="project-title">{p.title || 'Untitled'}</span>
+            <div class="project-actions">
+              <a href={`/admin/edit/${p.id}`} class="btn-action btn-edit">Edit</a>
+              <button class="btn-action btn-delete" data-project-id={p.id}>Delete</button>
             </div>
           </li>
         ))}
@@ -66,98 +58,5 @@ try {
   </div>
 </MainLayout>
 <script>
-  // Type-Safe Element Selectors
-  const addForm = document.getElementById('add-product-form') as HTMLFormElement | null;
-  const mainImageUpload = document.getElementById('main-image-upload') as HTMLInputElement | null;
-  const mainImageUrlInput = document.getElementById('main-image-url') as HTMLInputElement | null;
-  const galleryImagesUrlInput = document.getElementById('gallery-images-url') as HTMLInputElement | null;
-  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
-  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
-  const productList = document.getElementById('product-list') as HTMLUListElement | null;
-
-  // Type-Safe uploadFile function
-  async function uploadFile(file: File): Promise<string> {
-    const response = await fetch('/api/products/upload', {
-      method: 'POST', body: file, headers: { 'Content-Type': file.type }
-    });
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(`Upload failed: ${result.error}`);
-    }
-    const result = await response.json();
-    return result.url;
-  }
-
-  // Type-Safe Event Listeners
-  addForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!submitBtn || !formStatus || !mainImageUpload || !mainImageUrlInput || !galleryImagesUrlInput) return;
-
-    submitBtn.disabled = true;
-    formStatus.textContent = 'Uploading image...';
-
-    const mainImageFile = mainImageUpload.files?.[0];
-    if (!mainImageFile) {
-      alert('Please select a main image.');
-      submitBtn.disabled = false;
-      formStatus.textContent = '';
-      return;
-    }
-
-    try {
-      const uploadedImageUrl = await uploadFile(mainImageFile);
-      mainImageUrlInput.value = uploadedImageUrl;
-      galleryImagesUrlInput.value = JSON.stringify([uploadedImageUrl]);
-      formStatus.textContent = 'Image uploaded! Submitting product...';
-
-      const formData = new FormData(addForm);
-      const productData = {
-        title: formData.get('title'),
-        description: formData.get('description'),
-        category: formData.get('category'),
-        price: parseFloat(formData.get('price') as string),
-        image: formData.get('image'),
-        images: JSON.parse(formData.get('images') as string)
-      };
-
-      const productResponse = await fetch('/api/products/add', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData),
-      });
-
-      if (productResponse.ok) {
-        alert('Product added successfully!');
-        window.location.reload();
-      } else {
-        const result = await productResponse.json();
-        throw new Error(`Failed to add product data: ${result.error}`);
-      }
-    } catch (err) {
-      const error = err as Error;
-      alert(`An error occurred: ${error.message}`);
-      formStatus.textContent = '';
-      submitBtn.disabled = false;
-    }
-  });
-
-  productList?.addEventListener('click', async (e) => {
-    const target = e.target as HTMLElement;
-    if (target.matches('.btn-delete')) {
-      const productId = target.dataset.productId;
-      if (!productId) return;
-      if (confirm('Are you sure you want to delete this product?')) {
-        const response = await fetch('/api/products/delete', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: productId }),
-        });
-        if (response.ok) {
-          target.closest('li')?.remove();
-          alert('Product deleted.');
-        } else {
-          const result = await response.json();
-          alert(`Error deleting product: ${result.error}`);
-        }
-      }
-    }
-  });
+  // Add Project Logic
 </script>

@@ -1,0 +1,30 @@
+---
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { supabase } from '../../../lib/supabase';
+import { type Project } from '@/lib/types';
+import '../../../styles/admin.css';
+
+const { id } = Astro.params;
+let project: Project | null = null;
+if (id) {
+  const { data } = await supabase.from('projects').select('*').eq('id', id).single();
+  project = data as Project;
+}
+if (!project) { return new Response("Project not found", { status: 404 }); }
+---
+<MainLayout title={`Edit: ${project.title}`}>
+  <div class="admin-panel">
+    <header class="admin-header">
+      <h1>Edit Project</h1>
+      <a href="/admin" class="back-link">&larr; Back to Manager</a>
+    </header>
+    <section class="admin-section">
+      <form id="edit-project-form" class="project-form">
+        <!-- Fields pre-filled with project data -->
+      </form>
+    </section>
+  </div>
+</MainLayout>
+<script>
+  // Edit Project Logic
+</script>

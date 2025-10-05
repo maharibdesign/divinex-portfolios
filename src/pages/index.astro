@@ -1,38 +1,117 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
+import { type Project } from '@/lib/types';
+
+// Fetch projects from our new API endpoint
+let projects: Project[] = [];
+try {
+  const response = await fetch(`${Astro.url.origin}/api/projects/get`);
+  if (response.ok) {
+    projects = await response.json() as Project[];
+  }
+} catch (error) {
+  console.error("Fetch failed for homepage:", error);
+}
+
+const categories = ['All', ...new Set(projects.map(p => p.category).filter(Boolean))];
 ---
 <MainLayout title="Divinex - Designer Portfolio">
   <div class="portfolio-header">
     <h1>Creative Portfolio</h1>
     <p>A curated collection of design projects spanning UI/UX, branding, and illustration.</p>
   </div>
-  
-  <div class="placeholder">
-    <p>Portfolio projects will be displayed here soon.</p>
+
+  <!-- Filter Controls -->
+  <div class="filters">
+    <input type="search" id="search-bar" placeholder="Search projects..." />
+    <div class="category-filters" id="category-filters">
+      {categories.map((cat, i) => <button class:list={["filter-btn", { active: i === 0 }]} data-category={cat}>{cat}</button>)}
+    </div>
+  </div>
+
+  <!-- Portfolio Grid -->
+  <div id="project-grid">
+    {projects.map(project => (
+      <a href={`/projects/${project.id}/`} class="project-card" data-name={(project.title || '').toLowerCase()} data-category={project.category || ''}>
+        <div class="card-image-container">
+          <img src={project.cover_image || '/favicon.svg'} alt={project.title || 'Project cover'} loading="lazy" />
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">{project.title || 'Untitled Project'}</h3>
+          <p class="card-category">{project.category || 'Uncategorized'}</p>
+        </div>
+      </a>
+    ))}
   </div>
 </MainLayout>
+
+<script>
+  // This is the same battle-tested script from Storeka, it will work perfectly here.
+  const searchBar = document.getElementById('search-bar') as HTMLInputElement;
+  const categoryContainer = document.getElementById('category-filters');
+  const projectCards = document.querySelectorAll('.project-card') as NodeListOf<HTMLElement>;
+  let activeCategory = 'All';
+  function filterProjects() {
+    const searchTerm = searchBar.value.toLowerCase().trim();
+    projectCards.forEach(card => {
+      const cardName = card.dataset.name || '';
+      const cardCategory = card.dataset.category || '';
+      const isCategoryMatch = activeCategory === 'All' || cardCategory === activeCategory;
+      const isSearchMatch = cardName.includes(searchTerm);
+      card.style.display = isCategoryMatch && isSearchMatch ? 'block' : 'none';
+    });
+  }
+  categoryContainer?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.matches('.filter-btn')) {
+      categoryContainer.querySelector('.active')?.classList.remove('active');
+      target.classList.add('active');
+      activeCategory = target.dataset.category || 'All';
+      filterProjects();
+    }
+  });
+  searchBar.addEventListener('input', filterProjects);
+  filterProjects();
+</script>
+
 <style>
-  .portfolio-header {
-    text-align: center;
-    padding: 4rem 1rem 2rem;
+  .portfolio-header { text-align: center; padding: 2rem 1rem 2rem; }
+  .portfolio-header h1 { font-size: 3rem; font-weight: 800; margin: 0; letter-spacing: -1.5px; }
+  .portfolio-header p { font-size: 1.2rem; color: var(--hint-color); margin-top: 0.5rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+  .filters { max-width: 800px; margin: 0 auto 3rem auto; display: flex; flex-direction: column; gap: 1rem; }
+  #search-bar { width: 100%; padding: 0.8rem 1.25rem; font-size: 1rem; border-radius: 16px; border: 1px solid var(--border-color); background-color: var(--secondary-bg-color); color: var(--text-color); }
+  .category-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+  .filter-btn { padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 500; border: none; border-radius: 12px; background-color: var(--secondary-bg-color); color: var(--text-color); cursor: pointer; transition: 0.2s; }
+  .filter-btn.active { background-color: var(--button-color); color: var(--button-text-color); }
+
+  #project-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr; /* 1 column on mobile */
   }
-  .portfolio-header h1 {
-    font-size: 3rem;
-    font-weight: 800;
-    margin: 0;
-    letter-spacing: -1.5px;
+  @media(min-width: 640px){ #project-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media(min-width:1024px){ #project-grid { grid-template-columns: repeat(3, 1fr); } } /* 3 columns for desktop */
+
+  .project-card {
+    display: block;
+    text-decoration: none;
+    overflow: hidden;
+    border-radius: 24px;
+    background-color: var(--secondary-bg-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .portfolio-header p {
-    font-size: 1.2rem;
-    color: var(--hint-color);
-    margin-top: 0.5rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+  .project-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+  .dark .project-card:hover { box-shadow: 0 0 35px color-mix(in srgb, var(--link-color) 15%, transparent); }
+
+  .card-image-container {
+    width: 100%;
+    aspect-ratio: 4 / 3; /* A classic design aspect ratio */
+    background-color: var(--bg-color);
   }
-  .placeholder {
-    text-align: center;
-    padding: 6rem 1rem;
-    color: var(--hint-color);
-  }
+  .project-card img { width: 100%; height: 100%; object-fit: cover; }
+
+  .card-content { padding: 1rem 1.25rem; }
+  .card-title { font-size: 1.25rem; font-weight: 600; color: var(--text-color); margin: 0; }
+  .card-category { font-size: 0.85rem; color: var(--hint-color); margin-top: 0.25rem; }
 </style>
