@@ -1,5 +1,10 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
+
+// If a user is already logged in and visits this page, redirect them away.
+if (Astro.locals.session) {
+    return Astro.redirect('/');
+}
 ---
 <MainLayout title="Log In - Divinex">
   <div class="auth-container">
@@ -41,7 +46,7 @@ import MainLayout from '../layouts/MainLayout.astro';
       submitBtn.removeAttribute('disabled');
       submitBtn.textContent = 'Log In';
     } else {
-      // !!! THE FIX: Redirect to the homepage, not the deleted /admin page !!!
+      // The redirect is correct, but let's ensure it works.
       window.location.href = '/'; 
     }
   });

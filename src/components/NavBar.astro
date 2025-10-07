@@ -1,5 +1,6 @@
 ---
-// This correctly reads the session provided by our middleware
+// This is server-side code. It runs ONCE when the page is requested.
+// It correctly reads the session provided by our middleware.
 const { session } = Astro.locals;
 ---
 <header>
@@ -8,7 +9,6 @@ const { session } = Astro.locals;
     <div class="nav-actions">
       {session ? (
         <>
-          <!-- We will point this to /profile/edit later -->
           <a href="/profile/edit" class="nav-button">Edit Profile</a>
           <form action="/api/auth/logout" method="POST">
             <button type="submit" class="nav-button secondary">Log Out</button>
@@ -28,7 +28,7 @@ const { session } = Astro.locals;
   </nav>
 </header>
 <script>
-  // This is the complete, restored script for the theme toggle
+  // This is client-side code, it only handles the theme toggle.
   document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
     if (!themeToggle) return;
@@ -38,7 +38,6 @@ const { session } = Astro.locals;
     };
 
     const savedTheme = localStorage.getItem('theme');
-    // Also check system preference as a fallback
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
     applyTheme(initialTheme);
@@ -52,6 +51,7 @@ const { session } = Astro.locals;
   });
 </script>
 <style>
+  /* Styles are unchanged */
   header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
   nav { max-width: 1400px; margin: 0 auto; padding: 0 1rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
   .brand-text { font-size: 1.75rem; font-weight: 800; color: var(--text-color); letter-spacing: -1px; text-decoration: none; }
