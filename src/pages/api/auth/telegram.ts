@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 import jwt from '@tsndr/cloudflare-worker-jwt';
+import { createHmac } from 'crypto';
 
-// A more robust and direct validation function
-async function validateTelegramData(initData: string, botToken: string): Promise<any> {
+// A new, simpler, and more robust validation function using Node.js crypto
+function validateTelegramData(initData: string, botToken: string): any {
   const urlParams = new URLSearchParams(initData);
   const hash = urlParams.get('hash');
   
@@ -12,37 +13,19 @@ async function validateTelegramData(initData: string, botToken: string): Promise
       dataToCheck.push(`${key}=${value}`);
     }
   }
-
+  
   // The data must be sorted alphabetically by key
   dataToCheck.sort();
   const dataCheckString = dataToCheck.join('\n');
 
-  // Import the bot token as a cryptographic key
-  const secretKey = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode("WebAppData"),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const hmacKey = await crypto.subtle.sign("HMAC", secretKey, new TextEncoder().encode(botToken));
-  const signingKey = await crypto.subtle.importKey(
-    "raw",
-    hmacKey,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  // Sign the data string
-  const signature = await crypto.subtle.sign("HMAC", signingKey, new TextEncoder().encode(dataCheckString));
+  // Step 1: Create the secret key from the bot token
+  const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
   
-  // Convert the signature to a hex string
-  const hexSignature = Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  // Step 2: Sign the data string with the secret key
+  const signature = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
-  if (hexSignature === hash) {
+  // Step 3: Compare the generated signature with the hash from Telegram
+  if (signature === hash) {
     const user = JSON.parse(urlParams.get('user') || '{}');
     if (user && user.id) {
         return user;
@@ -68,8 +51,9 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
       return new Response('initData is required.', { status: 400 });
     }
 
-    const telegramUser = await validateTelegramData(initData, botToken);
+    const telegramUser = validateTelegramData(initData, botToken);
     
+    // Create a custom JWT for Supabase
     const customJwt = await jwt.sign({
         aud: 'authenticated',
         exp: Math.floor(Date.now() / 1000) + (60 * 60),
@@ -81,6 +65,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
         role: 'authenticated',
     }, jwtSecret);
 
+    // Sign in to Supabase with the custom token
     const { error } = await supabase.auth.signInWithIdToken({
         provider: 'jwt',
         token: customJwt,
@@ -88,6 +73,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
 
     if (error) throw error;
     
+    // On success, send a success message.
     return new Response(JSON.stringify({ message: 'Authentication successful' }), { status: 200 });
 
   } catch (err) {
