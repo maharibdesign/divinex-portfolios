@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 import { createHmac } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 
-// The validation function is correct and remains.
+// Validation function is correct and remains.
 function validateTelegramData(initData: string, botToken: string): any {
   const urlParams = new URLSearchParams(initData);
   const hash = urlParams.get('hash');
@@ -23,76 +24,75 @@ function validateTelegramData(initData: string, botToken: string): any {
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const botToken = import.meta.env.TELEGRAM_BOT_TOKEN;
-  // These are required for the admin client
-  const supabaseUrl = import.meta.env.SUPABASE_URL; 
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const serviceKey = import.meta.env.SUPABASE_SERVICE_KEY;
 
   if (!botToken || !supabaseUrl || !serviceKey) {
     return new Response('Server configuration error.', { status: 500 });
   }
 
-  // Create a special Supabase Admin client that can perform privileged actions
-  const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+  const supabaseAdmin = createClient<Database>(supabaseUrl, serviceKey);
 
   try {
     const { initData } = await request.json();
-    if (!initData) {
-      return new Response('initData required.', { status: 400 });
-    }
+    if (!initData) { return new Response('initData required.', { status: 400 }); }
 
     const telegramUser = validateTelegramData(initData, botToken);
-    const telegramId = telegramUser.id.toString();
-
-    // Use a fake email address based on the Telegram ID. This is required by Supabase Auth
-    // but the user will never see or use it.
-    const userEmail = `${telegramId}@telegram.user`;
-
-    // Check if a user with this Telegram ID already exists
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1, perPage: 1
-    });
-    // This is a simplified check. A better check would be to query your profiles table.
-    // For now, let's assume we search by email.
+    const telegramId = telegramUser.id;
     
-    let userId: string | undefined;
+    // --- THE DEFINITIVE, UNBREAKABLE FIX ---
 
-    // A more direct way to find or create a user is needed. Let's simplify.
-    // We'll try to create a user. If it fails because they exist, we'll get their ID.
-    const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-        email: userEmail,
-        email_confirm: true, // Auto-confirm the email
-        user_metadata: {
-            provider: 'telegram',
-            provider_id: telegramId,
-            full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
-            avatar_url: telegramUser.photo_url
-        }
-    });
+    // 1. Check if a profile with this Telegram ID already exists in OUR table.
+    let { data: existingProfile, error: findError } = await supabaseAdmin
+      .from('profiles')
+      .select('id') // 'id' here is the Supabase auth UUID
+      .eq('telegram_id', telegramId)
+      .single();
 
-    if (createUserError && createUserError.message.includes('unique constraint')) {
-        // User already exists, we need to find them. This part is complex. Let's simplify the flow.
-        // We will just generate a link for the user based on their fake email.
-    } else if (createUserError) {
-        throw createUserError; // A different error occurred
+    if (findError && findError.code !== 'PGRST116') {
+      // PGRST116 is the code for "no rows found", which is not an error for us.
+      // Any other error should be thrown.
+      throw findError;
     }
 
-    // Now, generate a magic link for the user (whether they are new or existing)
+    let userEmail: string;
+
+    if (!existingProfile) {
+      // USER IS NEW. Create them in Supabase Auth.
+      const newUserEmail = `${telegramId}@telegram.user`;
+      
+      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+          email: newUserEmail,
+          email_confirm: true,
+          user_metadata: {
+              full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
+              provider_id: telegramId, // Store telegram_id in metadata for the trigger
+          }
+      });
+      if (createUserError) throw createUserError;
+      userEmail = newUser.user.email!;
+    } else {
+      // USER EXISTS. We need their email to generate the link.
+      const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
+      if (getUserError) throw getUserError;
+      userEmail = existingUser.user.email!;
+    }
+    
+    // 2. We now have a guaranteed valid user email. Generate a magic link.
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: userEmail,
-        options: {
-            redirectTo: new URL('/api/auth/callback', request.url).toString()
-        }
+        options: { redirectTo: new URL('/api/auth/callback', request.url).toString() }
     });
 
     if (linkError) throw linkError;
-
-    // Redirect the user to the magic link. This will log them in and set the cookie.
+    
+    // 3. Redirect the client to the magic link to complete the login.
     return redirect(linkData.properties.action_link);
 
   } catch (err) {
     const error = err as Error;
     console.error('Telegram Auth Error:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), { status: 401 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 };
