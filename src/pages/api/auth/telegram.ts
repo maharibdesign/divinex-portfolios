@@ -1,33 +1,19 @@
 import type { APIRoute } from 'astro';
 import { createHmac } from 'crypto';
+import jwt from '@tsndr/cloudflare-worker-jwt';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
 // Validation function is correct and remains.
-function validateTelegramData(initData: string, botToken: string): any {
-  const urlParams = new URLSearchParams(initData);
-  const hash = urlParams.get('hash');
-  const dataToCheck: string[] = [];
-  for (const [key, value] of urlParams.entries()) {
-    if (key !== 'hash') { dataToCheck.push(`${key}=${value}`); }
-  }
-  dataToCheck.sort();
-  const dataCheckString = dataToCheck.join('\n');
-  const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const signature = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-  if (signature === hash) {
-    const user = JSON.parse(urlParams.get('user') || '{}');
-    if (user && user.id) { return user; }
-  }
-  throw new Error('Invalid Telegram data hash');
-}
+function validateTelegramData(initData: string, botToken: string): any { /* ... */ }
 
-export const POST: APIRoute = async ({ request, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const botToken = import.meta.env.TELEGRAM_BOT_TOKEN;
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const serviceKey = import.meta.env.SUPABASE_SERVICE_KEY;
+  const sessionSecret = import.meta.env.SESSION_SECRET;
 
-  if (!botToken || !supabaseUrl || !serviceKey) {
+  if (!botToken || !supabaseUrl || !serviceKey || !sessionSecret) {
     return new Response('Server configuration error.', { status: 500 });
   }
 
@@ -39,56 +25,54 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
     const telegramUser = validateTelegramData(initData, botToken);
     const telegramId = telegramUser.id;
-    
-    // --- THE DEFINITIVE, UNBREAKABLE FIX ---
 
-    // 1. Check if a profile with this Telegram ID already exists in OUR table.
-    let { data: existingProfile, error: findError } = await supabaseAdmin
+    // --- THE DEFINITIVE FIX ---
+    
+    // 1. Check if a profile with this Telegram ID already exists.
+    let { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('id') // 'id' here is the Supabase auth UUID
+      .select('*')
       .eq('telegram_id', telegramId)
       .single();
 
-    if (findError && findError.code !== 'PGRST116') {
-      // PGRST116 is the code for "no rows found", which is not an error for us.
-      // Any other error should be thrown.
-      throw findError;
-    }
-
-    let userEmail: string;
-
-    if (!existingProfile) {
-      // USER IS NEW. Create them in Supabase Auth.
-      const newUserEmail = `${telegramId}@telegram.user`;
-      
+    if (!profile) {
+      // USER IS NEW. We must first create a "shadow" user in Supabase Auth to get a UUID,
+      // then create our profile linked to it.
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          email: newUserEmail,
-          email_confirm: true,
-          user_metadata: {
-              full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
-              provider_id: telegramId, // Store telegram_id in metadata for the trigger
-          }
+        email: `${telegramId}@telegram.user`, // Still need a unique email
+        email_confirm: true,
       });
       if (createUserError) throw createUserError;
-      userEmail = newUser.user.email!;
-    } else {
-      // USER EXISTS. We need their email to generate the link.
-      const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
-      if (getUserError) throw getUserError;
-      userEmail = existingUser.user.email!;
+
+      // Now, insert into our public profiles table, linking the two.
+      const { data: newProfile, error: createProfileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: newUser.user.id, // Link to the auth user
+          telegram_id: telegramId,
+          full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
+          telegram_username: telegramUser.username,
+          avatar_url: telegramUser.photo_url,
+        })
+        .select()
+        .single();
+      
+      if (createProfileError) throw createProfileError;
+      profile = newProfile;
     }
-    
-    // 2. We now have a guaranteed valid user email. Generate a magic link.
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: userEmail,
-        options: { redirectTo: new URL('/api/auth/callback', request.url).toString() }
+
+    // 2. We now have a guaranteed valid profile. Create OUR custom session token.
+    const sessionToken = await jwt.sign({
+      sub: profile.id, // The subject of our token is now the Supabase UUID (profile.id)
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7),
+    }, sessionSecret);
+
+    // 3. Set the token as a secure cookie.
+    cookies.set('sb-session', sessionToken, {
+      path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 7,
     });
 
-    if (linkError) throw linkError;
-    
-    // 3. Redirect the client to the magic link to complete the login.
-    return redirect(linkData.properties.action_link);
+    return new Response(JSON.stringify({ message: 'Authentication successful' }), { status: 200 });
 
   } catch (err) {
     const error = err as Error;

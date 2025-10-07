@@ -48,6 +48,7 @@ export type Database = {
           headline: string | null
           id: string
           portfolio_link: string | null
+          telegram_id: number
           telegram_username: string | null
         }
         Insert: {
@@ -58,6 +59,7 @@ export type Database = {
           headline?: string | null
           id: string
           portfolio_link?: string | null
+          telegram_id: number
           telegram_username?: string | null
         }
         Update: {
@@ -68,6 +70,7 @@ export type Database = {
           headline?: string | null
           id?: string
           portfolio_link?: string | null
+          telegram_id?: number
           telegram_username?: string | null
         }
         Relationships: []

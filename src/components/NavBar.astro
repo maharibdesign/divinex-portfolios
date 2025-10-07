@@ -1,61 +1,41 @@
 ---
-const { session } = Astro.locals;
+const { user } = Astro.locals;
 ---
 <header>
   <nav>
     <a href="/" class="brand-text">Divinex</a>
     <div class="nav-actions">
-      {session ? (
+      {user ? (
         <a href="/profile/edit" class="nav-button">Edit Profile</a>
       ) : (
         <button id="create-profile-btn" class="nav-button">Create Your Profile</button>
       )}
       <button id="theme-toggle" title="Toggle theme">
-        <!-- Cleaned and verified SVG code -->
         <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
       </button>
     </div>
   </nav>
 </header>
-
-
 <script>
-  // Declare the Telegram object on the window for TypeScript
-  declare global {
-    interface Window { Telegram: any; }
-  }
-
+  declare global { interface Window { Telegram: any; } }
   document.addEventListener('DOMContentLoaded', () => {
     const createProfileBtn = document.getElementById('create-profile-btn') as HTMLButtonElement | null;
-
-    // --- One-Click Sign-In Logic ---
     if (createProfileBtn) {
-      // Only add the listener if the button exists (i.e., user is logged out)
       createProfileBtn.addEventListener('click', async () => {
         try {
           if (!window.Telegram?.WebApp?.initData) {
-            alert('This feature is only available within the Telegram Mini App.');
-            return;
+            alert('This feature is only available within the Telegram Mini App.'); return;
           }
-
           createProfileBtn.disabled = true;
           createProfileBtn.textContent = 'Authenticating...';
-
           const response = await fetch('/api/auth/telegram', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: window.Telegram.WebApp.initData }),
           });
-
-          if (!response.ok) {
-            throw new Error('Authentication failed on the server.');
-          }
-
-          // On success, the server has set the session cookie.
-          // Redirect to the profile edit page to complete setup.
+          if (!response.ok) { throw new Error('Authentication failed on the server.'); }
           window.location.href = '/profile/edit';
-
         } catch (error) {
           alert('Could not sign in. Please try restarting the Mini App.');
           if(createProfileBtn) {
@@ -65,13 +45,9 @@ const { session } = Astro.locals;
         }
       });
     }
-
-    // --- Theme Toggle Logic ---
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
-      const applyTheme = (theme: string) => {
-        document.documentElement.classList.toggle('dark', theme === 'dark');
-      };
+      const applyTheme = (theme: string) => { document.documentElement.classList.toggle('dark', theme === 'dark'); };
       const savedTheme = localStorage.getItem('theme');
       const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
@@ -86,26 +62,16 @@ const { session } = Astro.locals;
   });
 </script>
 <style>
-  header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
+  header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
   nav { max-width: 1400px; margin: 0 auto; padding: 0 1rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
   .brand-text { font-size: 1.75rem; font-weight: 800; color: var(--text-color); letter-spacing: -1px; text-decoration: none; }
   .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
-  
   .nav-button {
-    font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1rem;
-    border-radius: 8px; text-decoration: none;
-    background-color: var(--button-color);
-    color: var(--button-text-color);
-    transition: background-color 0.2s;
-    border: 1px solid transparent;
-    cursor: pointer;
-    font-family: inherit;
+    font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none;
+    background-color: var(--button-color); color: var(--button-text-color);
+    transition: background-color 0.2s; border: 1px solid transparent; cursor: pointer; font-family: inherit;
   }
-  .nav-button:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-  
+  .nav-button:disabled { opacity: 0.7; cursor: not-allowed; }
   #theme-toggle { background: none; border: none; cursor: pointer; padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-color); }
   #theme-toggle:hover { background-color: var(--border-color); }
   .icon-moon, .dark .icon-sun { display: none; }
