@@ -1,4 +1,5 @@
 ---
+// This correctly reads the session provided by our middleware
 const { session } = Astro.locals;
 ---
 <header>
@@ -7,8 +8,8 @@ const { session } = Astro.locals;
     <div class="nav-actions">
       {session ? (
         <>
-          <a href="/admin" class="nav-button">Dashboard</a>
-          <!-- This is now a form that POSTs to the logout endpoint -->
+          <!-- We will point this to /profile/edit later -->
+          <a href="/profile/edit" class="nav-button">Edit Profile</a>
           <form action="/api/auth/logout" method="POST">
             <button type="submit" class="nav-button secondary">Log Out</button>
           </form>
@@ -27,17 +28,35 @@ const { session } = Astro.locals;
   </nav>
 </header>
 <script>
-  // Script is unchanged
+  // This is the complete, restored script for the theme toggle
+  document.addEventListener('DOMContentLoaded', () => {
+    const themeToggle = document.getElementById('theme-toggle');
+    if (!themeToggle) return;
+    
+    const applyTheme = (theme: string) => {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    };
+
+    const savedTheme = localStorage.getItem('theme');
+    // Also check system preference as a fallback
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+    applyTheme(initialTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      const newTheme = isDark ? 'light' : 'dark';
+      applyTheme(newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+  });
 </script>
 <style>
   header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
   nav { max-width: 1400px; margin: 0 auto; padding: 0 1rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
   .brand-text { font-size: 1.75rem; font-weight: 800; color: var(--text-color); letter-spacing: -1px; text-decoration: none; }
   .nav-actions { display: flex; align-items: center; gap: 0.75rem; }
-  
-  /* Style for the form to make the button look like the other links */
   .nav-actions form { margin: 0; }
-  
   .nav-button {
     font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1rem;
     border-radius: 8px; text-decoration: none;
@@ -45,8 +64,8 @@ const { session } = Astro.locals;
     color: var(--button-text-color);
     transition: background-color 0.2s;
     border: 1px solid transparent;
-    cursor: pointer; /* Make the button look clickable */
-    font-family: inherit; /* Ensure button uses the same font */
+    cursor: pointer;
+    font-family: inherit;
   }
   .nav-button.secondary {
     background-color: var(--secondary-bg-color);

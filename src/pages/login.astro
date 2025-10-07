@@ -41,9 +41,7 @@ import MainLayout from '../layouts/MainLayout.astro';
       submitBtn.removeAttribute('disabled');
       submitBtn.textContent = 'Log In';
     } else {
-      // !!! THIS IS THE FIX !!!
-      // On success, redirect to the homepage. This forces the server
-      // to re-render the page with the new session, showing the correct navbar.
+      // !!! THE FIX: Redirect to the homepage, not the deleted /admin page !!!
       window.location.href = '/'; 
     }
   });
