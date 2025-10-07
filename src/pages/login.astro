@@ -1,10 +1,6 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-
-// If a user is already logged in, redirect them away.
-if (Astro.locals.session) {
-    return Astro.redirect('/');
-}
+if (Astro.locals.session) { return Astro.redirect('/'); }
 ---
 <MainLayout title="Log In - Divinex">
   <div class="auth-container">
@@ -23,22 +19,18 @@ if (Astro.locals.session) {
 </MainLayout>
 <script>
   import { supabase } from '../lib/supabase-client';
-
   const form = document.getElementById('login-form') as HTMLFormElement | null;
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
   const formMessage = document.getElementById('form-message') as HTMLDivElement | null;
-
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!submitBtn || !formMessage) return;
-
     submitBtn.disabled = true;
     submitBtn.textContent = 'Logging In...';
     formMessage.textContent = '';
     
     const email = (document.getElementById('email') as HTMLInputElement).value;
     const password = (document.getElementById('password') as HTMLInputElement).value;
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -46,14 +38,10 @@ if (Astro.locals.session) {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Log In';
     } else {
-      // !!! THE FIX: Use a meta refresh for a more forceful redirect !!!
-      formMessage.textContent = 'Success! Redirecting...';
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      // THE FIX: Do nothing. Supabase handles the session and our middleware/callback handles the redirect.
+      // We force a reload to ensure the page state updates.
+      window.location.href = '/';
     }
   });
 </script>
-<style>
-  /* Styles are unchanged */
-</style>
+<style>/* Unchanged */</style>
