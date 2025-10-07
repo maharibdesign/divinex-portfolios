@@ -1,0 +1,15 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+
+// Protect this page: if no user is logged in, redirect them.
+if (!Astro.locals.session) {
+    return Astro.redirect('/login');
+}
+---
+<MainLayout title="Edit Your Profile">
+    <div style="text-align: center; padding: 4rem 1rem;">
+        <h1>Edit Profile</h1>
+        <p>This is where the profile editing form will go.</p>
+        <a href="/">← Back to Home</a>
+    </div>
+</MainLayout>
