@@ -1,0 +1,58 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+---
+<MainLayout title="Log In - Divinex">
+  <div class="auth-container">
+    <div class="auth-form-wrapper">
+      <h1>Welcome Back</h1>
+      <p>Log in to manage your portfolio.</p>
+      <form id="login-form" class="auth-form">
+        <label>Email <input type="email" id="email" required /></label>
+        <label>Password <input type="password" id="password" required /></label>
+        <button type="submit" id="submit-btn" class="btn-primary">Log In</button>
+        <div id="form-message"></div>
+      </form>
+      <p class="auth-switch">Don't have an account? <a href="/signup">Sign Up</a></p>
+    </div>
+  </div>
+</MainLayout>
+<script>
+  import { supabase } from '../lib/supabase-client';
+
+  const form = document.getElementById('login-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const formMessage = document.getElementById('form-message');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!submitBtn || !formMessage) return;
+
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = 'Logging In...';
+    formMessage.textContent = '';
+    
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      formMessage.textContent = error.message;
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = 'Log In';
+    } else {
+      window.location.href = '/admin';
+    }
+  });
+</script>
+<style>
+  .auth-container { display: grid; place-items: center; padding: 4rem 1rem; }
+  .auth-form-wrapper { max-width: 400px; width: 100%; text-align: center; }
+  .auth-form { display: flex; flex-direction: column; gap: 1rem; text-align: left; margin-top: 2rem; }
+  .auth-form label { font-weight: 500; }
+  .auth-form input { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); }
+  .btn-primary { width: 100%; padding: 0.75rem; border-radius: 8px; border: none; background-color: var(--button-color); color: var(--button-text-color); font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+  .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+  #form-message { margin-top: 1rem; color: var(--hint-color); min-height: 1.2em; }
+  .auth-switch { margin-top: 2rem; color: var(--hint-color); }
+</style>

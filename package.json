@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@astrojs/vercel": "^8.2.1",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.50.3",
     "@types/marked": "^6.0.0",
     "@types/uuid": "^10.0.0",

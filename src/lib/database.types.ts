@@ -39,6 +39,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          portfolio_link: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          portfolio_link?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          portfolio_link?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           category: string | null
@@ -52,6 +82,7 @@ export type Database = {
           is_featured: boolean
           project_link: string | null
           title: string
+          user_id: string | null
         }
         Insert: {
           category?: string | null
@@ -65,6 +96,7 @@ export type Database = {
           is_featured?: boolean
           project_link?: string | null
           title: string
+          user_id?: string | null
         }
         Update: {
           category?: string | null
@@ -78,8 +110,17 @@ export type Database = {
           is_featured?: boolean
           project_link?: string | null
           title?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
