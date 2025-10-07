@@ -1,37 +1,97 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-if (Astro.locals.session) { return Astro.redirect('/'); }
 
-// !!! THIS IS THE FIX !!!
-// We must use the .get() method to read URL parameters.
+if (Astro.locals.session) {
+    return Astro.redirect('/');
+}
+// !!! FIX #1: Use the .get() method to read URL parameters !!!
 const error = Astro.url.searchParams.get('error');
-const message = Astro.url.searchParams.get('message');
 ---
-<MainLayout title="Log In - Divinex">
+<MainLayout title="Sign In - Divinex">
   <div class="auth-container">
     <div class="auth-form-wrapper">
-      <h1>Welcome Back</h1>
-      <p>Log in to manage your profile.</p>
-      <form method="POST" action="/api/auth/login" class="auth-form">
-        <label>Email <input type="email" name="email" required /></label>
-        <label>Password <input type="password" name="password" required /></label>
-        <button type="submit" class="btn-primary">Log In</button>
-        {error && <div class="form-message error">{error}</div>}
-        {message && <div class="form-message success">{message}</div>}
-      </form>
-      <p class="auth-switch">Don't have an account? <a href="/signup">Sign Up</a></p>
+      <h1>Welcome to Divinex</h1>
+      <p>The premier showcase for talented designers.</p>
+
+      <button id="telegram-login-btn" class="btn-telegram">
+        <svg width="24" height="24" viewBox="0 0 496 496" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M248 8C111 8 0 119 0 256S111 504 248 504s248-111 248-248S385 8 248 8zm121.8 169.9l-40.7 191.8c-3 13.6-11.1 16.9-22.4 10.5l-62.4-45.6-29.9 28.8c-3.3 3.3-6.1 6.1-12.5 6.1l4.4-63.6 112.2-101.1c4.8-4.4-1.1-6.9-7.7-2.5l-137.9 86.6-60.8-19c-13.3-4.2-13.6-13.3 2.8-19.7l151.4-56.5c11.1-4.2 21.5 2.5 17.9 18.1z" fill="white"/></svg>
+        Sign In with Telegram
+      </button>
+
+      <div id="auth-status"></div>
+      {error && <div class="auth-error">Authentication failed. Please try again.</div>}
     </div>
   </div>
 </MainLayout>
+<script>
+  // !!! FIX #2: Tell TypeScript about the window.Telegram object !!!
+  // We declare it as a global type so TypeScript doesn't complain.
+  declare global {
+    interface Window {
+      Telegram: any;
+    }
+  }
+
+  const loginButton = document.getElementById('telegram-login-btn') as HTMLButtonElement | null;
+  const authStatus = document.getElementById('auth-status') as HTMLDivElement | null;
+
+  async function performTelegramLogin(initData: string) {
+    if (!authStatus || !loginButton) return;
+
+    authStatus.textContent = 'Authenticating...';
+    loginButton.disabled = true;
+
+    try {
+      const response = await fetch('/api/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: initData }),
+      });
+      
+      // If the server handles the redirect, this part of the code will likely not be reached.
+      // If it fails, the server will redirect back here with an error parameter.
+      if (!response.ok) {
+        throw new Error('Authentication failed on the server.');
+      }
+      
+      // On a successful response that doesn't redirect (less likely), we'll redirect here.
+      window.location.href = '/';
+      
+    } catch (error) {
+      authStatus.textContent = 'Login failed. Please close and reopen the Mini App.';
+      if (loginButton) loginButton.disabled = false;
+    }
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!loginButton) return;
+    
+    // Now this check works without TypeScript errors.
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+      loginButton.addEventListener('click', () => {
+        performTelegramLogin(window.Telegram.WebApp.initData);
+      });
+    } else {
+      loginButton.style.display = 'none';
+      if (authStatus) {
+        authStatus.innerHTML = 'Please open this app inside Telegram to sign in.';
+      }
+    }
+  });
+</script>
 <style>
   .auth-container { display: grid; place-items: center; padding: 4rem 1rem; }
   .auth-form-wrapper { max-width: 400px; width: 100%; text-align: center; }
-  .auth-form { display: flex; flex-direction: column; gap: 1rem; text-align: left; margin-top: 2rem; }
-  .auth-form label { font-weight: 500; }
-  .auth-form input { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); }
-  .btn-primary { width: 100%; padding: 0.75rem; border-radius: 8px; border: none; background-color: var(--button-color); color: var(--button-text-color); font-weight: 600; cursor: pointer; }
-  .form-message { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; }
-  .form-message.error { color: #d8000c; background-color: #ffbaba; }
-  .form-message.success { color: #4f8a10; background-color: #dff2bf; }
-  .auth-switch { margin-top: 2rem; color: var(--hint-color); }
+  h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+  p { color: var(--hint-color); margin-bottom: 3rem; }
+  .btn-telegram {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.75rem;
+    width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 600;
+    border: none; border-radius: 12px; background-color: #0088cc;
+    color: white; cursor: pointer; transition: background-color 0.2s;
+  }
+  .btn-telegram:hover { background-color: #0077b3; }
+  .btn-telegram:disabled { background-color: #555; cursor: not-allowed; }
+  #auth-status, .auth-error { margin-top: 1rem; color: var(--hint-color); min-height: 1.2em; }
+  .auth-error { color: #ff3b30; }
 </style>
