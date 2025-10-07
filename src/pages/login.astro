@@ -5,7 +5,7 @@ import MainLayout from '../layouts/MainLayout.astro';
   <div class="auth-container">
     <div class="auth-form-wrapper">
       <h1>Welcome Back</h1>
-      <p>Log in to manage your portfolio.</p>
+      <p>Log in to manage your profile.</p>
       <form id="login-form" class="auth-form">
         <label>Email <input type="email" id="email" required /></label>
         <label>Password <input type="password" id="password" required /></label>
@@ -41,11 +41,15 @@ import MainLayout from '../layouts/MainLayout.astro';
       submitBtn.removeAttribute('disabled');
       submitBtn.textContent = 'Log In';
     } else {
-      window.location.href = '/admin';
+      // !!! THIS IS THE FIX !!!
+      // On success, redirect to the homepage. This forces the server
+      // to re-render the page with the new session, showing the correct navbar.
+      window.location.href = '/'; 
     }
   });
 </script>
 <style>
+  /* Styles are unchanged */
   .auth-container { display: grid; place-items: center; padding: 4rem 1rem; }
   .auth-form-wrapper { max-width: 400px; width: 100%; text-align: center; }
   .auth-form { display: flex; flex-direction: column; gap: 1rem; text-align: left; margin-top: 2rem; }

@@ -45,82 +45,32 @@ export type Database = {
           bio: string | null
           created_at: string
           full_name: string | null
+          headline: string | null
           id: string
           portfolio_link: string | null
-          username: string | null
+          telegram_username: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           full_name?: string | null
+          headline?: string | null
           id: string
           portfolio_link?: string | null
-          username?: string | null
+          telegram_username?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           full_name?: string | null
+          headline?: string | null
           id?: string
           portfolio_link?: string | null
-          username?: string | null
+          telegram_username?: string | null
         }
         Relationships: []
-      }
-      projects: {
-        Row: {
-          category: string | null
-          client: string | null
-          content: string | null
-          cover_image: string | null
-          created_at: string
-          description: string | null
-          gallery_images: Json | null
-          id: number
-          is_featured: boolean
-          project_link: string | null
-          title: string
-          user_id: string | null
-        }
-        Insert: {
-          category?: string | null
-          client?: string | null
-          content?: string | null
-          cover_image?: string | null
-          created_at?: string
-          description?: string | null
-          gallery_images?: Json | null
-          id?: number
-          is_featured?: boolean
-          project_link?: string | null
-          title: string
-          user_id?: string | null
-        }
-        Update: {
-          category?: string | null
-          client?: string | null
-          content?: string | null
-          cover_image?: string | null
-          created_at?: string
-          description?: string | null
-          gallery_images?: Json | null
-          id?: number
-          is_featured?: boolean
-          project_link?: string | null
-          title?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
