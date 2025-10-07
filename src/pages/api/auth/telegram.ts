@@ -1,29 +1,57 @@
 import type { APIRoute } from 'astro';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
-// Cryptographically validates the initData string from Telegram
+// A more robust and direct validation function
 async function validateTelegramData(initData: string, botToken: string): Promise<any> {
   const urlParams = new URLSearchParams(initData);
   const hash = urlParams.get('hash');
-  urlParams.delete('hash');
-
-  const dataToCheck = Array.from(urlParams.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
-
-  const secretKey = await crypto.subtle.importKey('raw', new TextEncoder().encode('WebAppData'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const botTokenKey = await crypto.subtle.sign('HMAC', secretKey, new TextEncoder().encode(botToken));
-  const signingKey = await crypto.subtle.importKey('raw', botTokenKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const signature = await crypto.subtle.sign('HMAC', signingKey, new TextEncoder().encode(dataToCheck));
   
-  const hexSignature = Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const dataToCheck: string[] = [];
+  for (const [key, value] of urlParams.entries()) {
+    if (key !== 'hash') {
+      dataToCheck.push(`${key}=${value}`);
+    }
+  }
+
+  // The data must be sorted alphabetically by key
+  dataToCheck.sort();
+  const dataCheckString = dataToCheck.join('\n');
+
+  // Import the bot token as a cryptographic key
+  const secretKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode("WebAppData"),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const hmacKey = await crypto.subtle.sign("HMAC", secretKey, new TextEncoder().encode(botToken));
+  const signingKey = await crypto.subtle.importKey(
+    "raw",
+    hmacKey,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  // Sign the data string
+  const signature = await crypto.subtle.sign("HMAC", signingKey, new TextEncoder().encode(dataCheckString));
+  
+  // Convert the signature to a hex string
+  const hexSignature = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
   if (hexSignature === hash) {
-    return JSON.parse(urlParams.get('user') || '{}');
+    const user = JSON.parse(urlParams.get('user') || '{}');
+    if (user && user.id) {
+        return user;
+    }
   }
+
   throw new Error('Invalid Telegram data hash');
 }
+
 
 export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const { supabase } = locals;
@@ -31,7 +59,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const jwtSecret = import.meta.env.SUPABASE_JWT_SECRET;
 
   if (!botToken || !jwtSecret) {
-    return new Response('Server configuration error.', { status: 500 });
+    return new Response('Server configuration error: Missing secrets.', { status: 500 });
   }
 
   try {
@@ -42,19 +70,17 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
 
     const telegramUser = await validateTelegramData(initData, botToken);
     
-    // Create a custom JWT that Supabase will accept
     const customJwt = await jwt.sign({
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) + (60 * 60), // Expires in 1 hour
-        sub: telegramUser.id.toString(), // The user's Telegram ID is the unique subject
+        exp: Math.floor(Date.now() / 1000) + (60 * 60),
+        sub: telegramUser.id.toString(),
         user_metadata: {
             full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
-            avatar_url: telegramUser.photo_url // We can pre-fill their TG photo
+            avatar_url: telegramUser.photo_url
         },
         role: 'authenticated',
     }, jwtSecret);
 
-    // Sign in to Supabase with our custom token
     const { error } = await supabase.auth.signInWithIdToken({
         provider: 'jwt',
         token: customJwt,
@@ -62,8 +88,6 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
 
     if (error) throw error;
     
-    // On success, we don't redirect. We send a success message.
-    // The client will handle the redirect.
     return new Response(JSON.stringify({ message: 'Authentication successful' }), { status: 200 });
 
   } catch (err) {
