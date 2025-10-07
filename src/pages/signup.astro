@@ -1,23 +1,20 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-if (Astro.locals.session) { return Astro.redirect('/'); }
-
 const error = Astro.url.searchParams.get('error');
-const message = Astro.url.searchParams.get('message');
 ---
-<MainLayout title="Log In - Divinex">
+<MainLayout title="Sign Up - Divinex">
   <div class="auth-container">
     <div class="auth-form-wrapper">
-      <h1>Welcome Back</h1>
-      <p>Log in to manage your profile.</p>
-      <form method="POST" action="/api/auth/login" class="auth-form">
+      <h1>Create Your Portfolio</h1>
+      <p>Join the Divinex community to showcase your work.</p>
+      <form method="POST" action="/api/auth/signup" class="auth-form">
+        <label>Full Name <input type="text" name="full_name" required /></label>
         <label>Email <input type="email" name="email" required /></label>
-        <label>Password <input type="password" name="password" required /></label>
-        <button type="submit" class="btn-primary">Log In</button>
+        <label>Password <input type="password" name="password" minlength="6" required /></label>
+        <button type="submit" class="btn-primary">Sign Up</button>
         {error && <div class="form-message error">{error}</div>}
-        {message && <div class="form-message success">{message}</div>}
       </form>
-      <p class="auth-switch">Don't have an account? <a href="/signup">Sign Up</a></p>
+      <p class="auth-switch">Already have an account? <a href="/login">Log In</a></p>
     </div>
   </div>
 </MainLayout>
@@ -30,6 +27,5 @@ const message = Astro.url.searchParams.get('message');
   .btn-primary { width: 100%; padding: 0.75rem; border-radius: 8px; border: none; background-color: var(--button-color); color: var(--button-text-color); font-weight: 600; cursor: pointer; }
   .form-message { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; }
   .form-message.error { color: #d8000c; background-color: #ffbaba; }
-  .form-message.success { color: #4f8a10; background-color: #dff2bf; }
   .auth-switch { margin-top: 2rem; color: var(--hint-color); }
 </style>
