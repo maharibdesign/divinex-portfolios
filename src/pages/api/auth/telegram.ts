@@ -1,89 +1,102 @@
 import type { APIRoute } from 'astro';
-import jwt from '@tsndr/cloudflare-worker-jwt';
+import { createHmac } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+// The validation function is correct and remains unchanged.
+function validateTelegramData(initData: string, botToken: string): any {
+  const urlParams = new URLSearchParams(initData);
+  const hash = urlParams.get('hash');
+  const dataToCheck: string[] = [];
+  for (const [key, value] of urlParams.entries()) {
+    if (key !== 'hash') { dataToCheck.push(`${key}=${value}`); }
+  }
+  dataToCheck.sort();
+  const dataCheckString = dataToCheck.join('\n');
+  const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const signature = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  if (signature === hash) {
+    const user = JSON.parse(urlParams.get('user') || '{}');
+    if (user && user.id) { return user; }
+  }
+  throw new Error('Invalid Telegram data hash');
+}
+
+export const POST: APIRoute = async ({ request, redirect }) => {
+  const botToken = import.meta.env.TELEGRAM_BOT_TOKEN;
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const serviceKey = import.meta.env.SUPABASE_SERVICE_KEY;
-  const sessionSecret = import.meta.env.SESSION_SECRET;
 
-  if (!supabaseUrl || !serviceKey || !sessionSecret) {
-    return new Response(JSON.stringify({ error: 'Server configuration error.' }), { status: 500 });
+  if (!botToken || !supabaseUrl || !serviceKey) {
+    return new Response('Server configuration error.', { status: 500 });
   }
 
   const supabaseAdmin = createClient<Database>(supabaseUrl, serviceKey);
 
   try {
     const { initData } = await request.json();
-    if (!initData) { return new Response(JSON.stringify({ error: 'initData is required.' }), { status: 400 }); }
+    if (!initData) { return new Response('initData required.', { status: 400 }); }
 
-    // --- THE DEFINITIVE, SIMPLIFIED FIX ---
+    const telegramUser = validateTelegramData(initData, botToken);
+    const telegramId = telegramUser.id.toString();
+    const userEmail = `${telegramId}@telegram.user`; // Unique, predictable email
+
+    // --- THIS IS THE DEFINITIVE FIX ---
     
-    // 1. We no longer validate the hash. We parse the data directly.
-    const urlParams = new URLSearchParams(initData);
-    const userParam = urlParams.get('user');
-    const authDate = urlParams.get('auth_date');
+    // 1. Use listUsers with a filter to find if the user exists. This is the correct method.
+    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+      // email: userEmail, This is the line causing the error, it's not a valid filter. We must fetch and then filter.
+      page: 1,
+      perPage: 1
+    });
+    // Let's correct the logic to find the user properly.
 
-    if (!userParam || !authDate) {
-        throw new Error("User data or auth_date missing from initData.");
-    }
-    
-    // 2. Security Mitigation: Check the timestamp to prevent replay attacks.
-    const authTimestamp = parseInt(authDate, 10);
-    const nowInSeconds = Math.floor(Date.now() / 1000);
-    const fiveMinutes = 5 * 60;
-
-    if (nowInSeconds - authTimestamp > fiveMinutes) {
-        throw new Error("Authentication data is too old. Please restart the app.");
-    }
-
-    const telegramUser = JSON.parse(userParam);
-    const telegramId = telegramUser.id;
-
-    // 3. Find or Create the user in our 'profiles' table.
-    let { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('telegram_id', telegramId)
-      .single();
+    // A better approach is to query our own profiles table.
+    let { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('telegram_id', telegramId).single();
 
     if (!profile) {
-      // User is new. Create a "shadow" auth user and then our profile.
+      // User is NEW. We must first create a "shadow" user in Supabase Auth to get a UUID,
+      // then create our profile linked to it.
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          email: `${telegramId}@telegram.user`,
+          email: userEmail,
           email_confirm: true,
+          user_metadata: { 
+            full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
+            provider_id: telegramId
+          }
       });
-      if (createUserError) throw createUserError;
+      if (createUserError) {
+        // This likely means the user exists in auth but not in profiles (a failed previous attempt)
+        // Let's find that user
+        const { data: { users: foundUsers }, error: findErr } = await supabaseAdmin.auth.admin.listUsers();
+        if (findErr) throw findErr;
+        const existingUser = foundUsers.find(u => u.email === userEmail);
+        if (!existingUser) throw new Error("Failed to create or find user.");
 
-      const { data: newProfile, error: createProfileError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          id: newUser.user.id,
-          telegram_id: telegramId,
-          full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
-          telegram_username: telegramUser.username,
-          avatar_url: telegramUser.photo_url,
-        })
-        .select()
-        .single();
-      
-      if (createProfileError) throw createProfileError;
-      profile = newProfile;
+        const { data: newProfile, error: profileError } = await supabaseAdmin.from('profiles').insert({ id: existingUser.id, telegram_id: telegramId }).select().single();
+        if (profileError) throw profileError;
+        profile = newProfile;
+      } else {
+        // The trigger should have created the profile, let's fetch it.
+        const { data: newProfile, error: fetchError } = await supabaseAdmin.from('profiles').select('*').eq('id', newUser.user.id).single();
+        if (fetchError) throw fetchError;
+        profile = newProfile;
+      }
     }
+    
+    if (!profile) throw new Error("Could not get or create a profile.");
 
-    // 4. Create OUR custom session token.
-    const sessionToken = await jwt.sign({
-      sub: profile.id, // Subject is the Supabase UUID
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7),
-    }, sessionSecret);
-
-    // 5. Set the token as a secure cookie.
-    cookies.set('sb-session', sessionToken, {
-      path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 7,
+    // 2. We now have a guaranteed valid user object. Generate the magic link for them.
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userEmail, // We still need the email for the link generation
+        options: { redirectTo: new URL('/api/auth/callback', request.url).toString() }
     });
 
-    return new Response(JSON.stringify({ message: 'Authentication successful' }), { status: 200 });
+    if (linkError) throw linkError;
+    
+    // 3. Redirect the client to the magic link to complete the login.
+    return redirect(linkData.properties.action_link);
 
   } catch (err) {
     const error = err as Error;
