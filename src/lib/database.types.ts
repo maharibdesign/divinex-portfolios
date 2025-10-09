@@ -46,7 +46,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           headline: string | null
-          id: string
+          id: number
           portfolio_link: string | null
           telegram_id: number
           telegram_username: string | null
@@ -57,7 +57,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           headline?: string | null
-          id: string
+          id?: number
           portfolio_link?: string | null
           telegram_id: number
           telegram_username?: string | null
@@ -68,7 +68,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           headline?: string | null
-          id?: string
+          id?: number
           portfolio_link?: string | null
           telegram_id?: number
           telegram_username?: string | null
@@ -80,7 +80,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_telegram_init_data_simple: {
+        Args: {
+          bot_token: string
+          data_check_string: string
+          hash_to_check: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
