@@ -1,6 +1,6 @@
 # Divinex Mini-App
 
-Storeka is a high-performance product catalog built with Astro, designed to function as a standalone website and a seamless Telegram Mini App. It features a dynamic backend powered by Supabase for product management and is deployed on Vercel.
+Divinex is a high-performance product catalog built with Astro, designed to function as a standalone website and a seamless Telegram Mini App. It features a dynamic backend powered by Supabase for product management and is deployed on Vercel.
 
 Live Application: [https://storeka-app.vercel.app](https://storeka-app.vercel.app)
 
