@@ -1,82 +1,51 @@
 ---
-// No server-side auth logic is needed here at all.
+const { user } = Astro.locals;
 ---
 <header>
   <nav>
     <a href="/" class="brand-text">Divinex</a>
     <div class="nav-actions">
-      <!-- These buttons are placeholders. The script will show the correct one. -->
-      <a href="/profile/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
-      <button id="create-profile-btn" class="nav-button" style="display: none;">Create Profile</button>
-      
+      {user ? (
+        <a href="/profile/edit" class="nav-button">Edit Profile</a>
+      ) : (
+        <button id="create-profile-btn" class="nav-button">Create Your Profile</button>
+      )}
       <button id="theme-toggle" title="Toggle theme">
-        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
       </button>
     </div>
   </nav>
 </header>
 <script>
-  // !!! UPDATED: Using the new, correct function name !!!
-  import { getAuthedSupabase } from '../lib/supabase-client';
-
   declare global { interface Window { Telegram: any; } }
-
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', () => {
     const createProfileBtn = document.getElementById('create-profile-btn') as HTMLButtonElement | null;
-    const editProfileBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
-    const themeToggle = document.getElementById('theme-toggle');
-
-    // --- Authentication Logic ---
-    const tg = window.Telegram?.WebApp;
-    if (tg && tg.initData && createProfileBtn && editProfileBtn) {
-      // Use the correct function to get a client with the necessary headers
-      const supabase = getAuthedSupabase(tg.initData);
-      const telegramUser = tg.initDataUnsafe.user;
-
-      if (telegramUser) {
-        // Check if the user already has a profile in our database
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('telegram_id', telegramUser.id)
-          .single();
-
-        if (profile) {
-          // User exists, show "Edit Profile" button
-          editProfileBtn.style.display = 'inline-block';
-        } else {
-          // User is new, show "Create Profile" button
-          createProfileBtn.style.display = 'inline-block';
-        }
-      }
-
+    if (createProfileBtn) {
       createProfileBtn.addEventListener('click', async () => {
-        createProfileBtn.disabled = true;
-        createProfileBtn.textContent = 'Creating...';
-        
-        // The RLS policy on the database will verify the user's identity via the header.
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            telegram_id: telegramUser.id,
-            full_name: `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
-            telegram_username: telegramUser.username,
-            avatar_url: telegramUser.photo_url
+        try {
+          if (!window.Telegram?.WebApp?.initData) {
+            alert('This feature is only available within the Telegram Mini App.'); return;
+          }
+          createProfileBtn.disabled = true;
+          createProfileBtn.textContent = 'Authenticating...';
+          const response = await fetch('/api/auth/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: window.Telegram.WebApp.initData }),
           });
-
-        if (insertError) {
-          alert(`Error creating profile: ${insertError.message}`);
-          createProfileBtn.disabled = false;
-          createProfileBtn.textContent = 'Create Profile';
-        } else {
-          // Success! Redirect to the edit page to add more details.
+          if (!response.ok) { throw new Error('Authentication failed on the server.'); }
           window.location.href = '/profile/edit';
+        } catch (error) {
+          alert('Could not sign in. Please try restarting the Mini App.');
+          if(createProfileBtn) {
+            createProfileBtn.disabled = false;
+            createProfileBtn.textContent = 'Create Your Profile';
+          }
         }
       });
     }
-
-    // --- Theme Toggle Logic ---
+    const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
       const applyTheme = (theme: string) => { document.documentElement.classList.toggle('dark', theme === 'dark'); };
       const savedTheme = localStorage.getItem('theme');
@@ -93,7 +62,6 @@
   });
 </script>
 <style>
-  /* Styles remain the same */
   header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
   nav { max-width: 1400px; margin: 0 auto; padding: 0 1rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
   .brand-text { font-size: 1.75rem; font-weight: 800; color: var(--text-color); letter-spacing: -1px; text-decoration: none; }
