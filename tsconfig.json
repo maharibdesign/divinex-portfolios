@@ -5,11 +5,5 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/pages/admin.astro",
-    "src/pages/admin"
-  ]
+  }
 }
