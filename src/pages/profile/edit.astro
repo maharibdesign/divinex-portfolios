@@ -1,13 +1,10 @@
 ---
 import MainLayout from '../../layouts/MainLayout.astro';
 import { type Profile } from '@/lib/types';
-import '../../styles/admin.css';
+import '../../styles/admin.css'; // This path is now correct
 
-// This page is protected by our middleware.
 const { user } = Astro.locals;
-if (!user) {
-    return Astro.redirect('/');
-}
+if (!user) { return Astro.redirect('/'); }
 ---
 <MainLayout title="Edit Your Profile">
   <div class="admin-panel">
@@ -17,25 +14,21 @@ if (!user) {
     </header>
     <section class="admin-section">
       <form id="edit-profile-form" class="project-form">
-        <!-- We use the user's telegram_id as the unique identifier for the update -->
         <input type="hidden" name="telegram_id" value={user.telegram_id} />
-        
         <div class="form-row">
-            <label>Full Name <input type="text" name="full_name" value={user.full_name || ''} required /></label>
-            <label>Headline <input type="text" name="headline" value={user.headline || ''} placeholder="e.g., UI/UX Designer" /></label>
+          <label>Full Name <input type="text" name="full_name" value={user.full_name || ''} required /></label>
+          <label>Headline <input type="text" name="headline" value={user.headline || ''} placeholder="e.g., UI/UX Designer" /></label>
         </div>
         <label>Bio <textarea name="bio" rows="4">{user.bio || ''}</textarea></label>
         <div class="form-row">
-            <label>Portfolio Link <input type="url" name="portfolio_link" value={user.portfolio_link || ''} placeholder="https://dribbble.com/..." /></label>
-            <label>Telegram Username <input type="text" name="telegram_username" value={user.telegram_username || ''} placeholder="YourUsername" /></label>
+          <label>Portfolio Link <input type="url" name="portfolio_link" value={user.portfolio_link || ''} placeholder="https://dribbble.com/..." /></label>
+          <label>Telegram Username <input type="text" name="telegram_username" value={user.telegram_username || ''} placeholder="YourUsername" /></label>
         </div>
-        
         <label>Replace Avatar (Optional) <input type="file" id="avatar-upload" accept="image/*" /></label>
         <div class="image-preview-wrapper">
           <span>Current Avatar:</span>
           <img src={user.avatar_url || '/favicon.svg'} alt="Current avatar" class="image-preview" />
         </div>
-        
         <div class="form-actions">
           <div id="form-status" class="upload-status"></div>
           <a href="/" class="btn btn-secondary">Cancel</a>
@@ -50,6 +43,7 @@ if (!user) {
     const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
     const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
     const avatarUpload = document.getElementById('avatar-upload') as HTMLInputElement | null;
+    const telegramIdInput = document.querySelector('input[name="telegram_id"]') as HTMLInputElement | null;
 
     async function uploadFile(file: File): Promise<string> {
         const response = await fetch('/api/projects/upload', {
@@ -61,26 +55,29 @@ if (!user) {
 
     editForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!submitBtn || !formStatus || !avatarUpload) return;
+        if (!submitBtn || !formStatus || !avatarUpload || !telegramIdInput) return;
 
         submitBtn.disabled = true;
         formStatus.textContent = 'Saving...';
 
         try {
             const formData = new FormData(editForm);
-            const profileData = Object.fromEntries(formData.entries());
+            // We get a plain object from the form data
+            const profileUpdateData = Object.fromEntries(formData.entries());
 
             const newAvatarFile = avatarUpload.files?.[0];
             if (newAvatarFile) {
                 formStatus.textContent = 'Uploading new avatar...';
                 const uploadedAvatarUrl = await uploadFile(newAvatarFile);
-                profileData.avatar_url = uploadedAvatarUrl;
+                // We add the new avatar URL to our data object
+                profileUpdateData.avatar_url = uploadedAvatarUrl;
             }
 
             const response = await fetch('/api/profiles/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(profileData)
+                // We send the complete data object to be updated
+                body: JSON.stringify(profileUpdateData)
             });
 
             if (!response.ok) {
@@ -89,7 +86,7 @@ if (!user) {
             }
 
             alert('Profile updated successfully!');
-            window.location.href = '/'; // Go to homepage after saving
+            window.location.href = '/';
 
         } catch (err) {
             const error = err as Error;

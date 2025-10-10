@@ -4,7 +4,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from './lib/database.types';
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  // This client is used for all server-side operations
   const supabase = createServerClient<Database>(
     import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
@@ -16,9 +15,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
       },
     }
   );
-  context.locals.supabase = supabase; // Make supabase client available on all pages
+  context.locals.supabase = supabase;
 
-  // Our custom session logic
   const sessionCookie = context.cookies.get('session-token')?.value;
   const sessionSecret = import.meta.env.SESSION_SECRET;
   
@@ -26,11 +24,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (sessionCookie && sessionSecret) {
     try {
-      const payload = await jwt.verify(sessionCookie, sessionSecret);
+      const payload = await jwt.verify(sessionCookie, sessionSecret) as { sub?: string } | false;
       
-      // The definitive, safe way to check the payload
-      if (payload && typeof payload.payload.sub === 'string') {
-        const profileId = parseInt(payload.payload.sub, 10);
+      // --- THE DEFINITIVE TYPE-SAFE FIX ---
+      if (payload && typeof payload.sub === 'string') {
+        const profileId = parseInt(payload.sub, 10);
         
         if (!isNaN(profileId)) {
           const { data: userProfile } = await supabase
@@ -43,6 +41,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
             context.locals.user = userProfile;
           }
         }
+      } else {
+        throw new Error("Token payload is invalid.");
       }
     } catch (e) {
       context.cookies.delete('session-token', { path: '/' });
